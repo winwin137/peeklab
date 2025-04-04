@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useNotifications } from '@/hooks/useNotifications';
 import { MealCycle } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
-import { XCircle } from 'lucide-react';
+import { XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface MealCycleTimerProps {
   mealCycle: MealCycle;
@@ -21,6 +22,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   onAbandon
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number} | null>(null);
   const { getNotificationStatus } = useNotifications(mealCycle);
   
   // Update elapsed time every second
@@ -31,6 +33,39 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       const now = Date.now();
       const elapsed = now - mealCycle.startTime;
       setElapsedTime(elapsed);
+      
+      // Find the next reading
+      const nextReadingData = findNextReading();
+      setNextReading(nextReadingData);
+    };
+    
+    // Find the next upcoming reading
+    const findNextReading = () => {
+      // Sort intervals that haven't been completed
+      const pendingIntervals = INTERVALS.filter(
+        interval => !mealCycle.postprandialReadings[interval]
+      ).sort((a, b) => a - b);
+      
+      if (pendingIntervals.length === 0) return null;
+      
+      for (const minutesMark of pendingIntervals) {
+        const status = getNotificationStatus(minutesMark);
+        if (!status.due) {
+          // This reading is in the future
+          return {
+            minutesMark,
+            timeRemaining: status.timeUntil || 0
+          };
+        }
+      }
+      
+      // If all readings are due/overdue, return the first one
+      const firstPending = pendingIntervals[0];
+      const status = getNotificationStatus(firstPending);
+      return {
+        minutesMark: firstPending,
+        timeRemaining: 0
+      };
     };
     
     // Update immediately
@@ -40,11 +75,19 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     const interval = setInterval(updateElapsedTime, 1000);
     
     return () => clearInterval(interval);
-  }, [mealCycle.startTime]);
+  }, [mealCycle.startTime, mealCycle.postprandialReadings, getNotificationStatus]);
   
   // Formatted elapsed time (mm:ss)
   const formatElapsedTime = () => {
     const totalSeconds = Math.floor(elapsedTime / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+  
+  // Format countdown time (mm:ss)
+  const formatCountdown = (milliseconds: number) => {
+    const totalSeconds = Math.ceil(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -64,6 +107,16 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     
     const elapsed = elapsedTime / 1000 / 60; // minutes
     return Math.min((elapsed / 180) * 100, 100); // 180 mins is the full cycle
+  };
+  
+  // Calculate countdown progress
+  const calculateCountdownProgress = () => {
+    if (!nextReading || nextReading.timeRemaining <= 0) return 100;
+    
+    const minutesMark = nextReading.minutesMark;
+    const totalDuration = minutesMark * 60 * 1000 - (minutesMark > 20 ? (minutesMark - 20) * 60 * 1000 : 0);
+    const progress = ((totalDuration - nextReading.timeRemaining) / totalDuration) * 100;
+    return Math.min(progress, 100);
   };
   
   // Check which intervals need readings
@@ -134,6 +187,26 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
             style={{ width: `${calculateProgress()}%` }}
           />
         </div>
+
+        {nextReading && (
+          <div className="mt-4 bg-muted/50 p-3 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {nextReading.timeRemaining > 0 
+                    ? `Next reading in ${formatCountdown(nextReading.timeRemaining)}`
+                    : `${nextReading.minutesMark}-minute reading due now!`
+                  }
+                </span>
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                {nextReading.minutesMark} min
+              </span>
+            </div>
+            <Progress value={calculateCountdownProgress()} className="h-1.5" />
+          </div>
+        )}
         
         <div className="grid grid-cols-3 gap-2 pt-4">
           {INTERVALS.map(minutes => {
