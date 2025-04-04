@@ -25,7 +25,8 @@ const Dashboard: React.FC = () => {
     abandonMealCycle,
     isOffline,
     pendingMealCycle,
-    error
+    error,
+    isStartingMealCycle
   } = useMealCycles();
   
   const { notifications } = useNotifications(activeMealCycle);
@@ -59,9 +60,9 @@ const Dashboard: React.FC = () => {
     setInputMode('adhoc');
   };
   
-  const handlePreprandialSubmit = (value: number) => {
+  const handlePreprandialSubmit = async (value: number) => {
     console.log('Starting meal cycle with preprandial value:', value);
-    startMealCycle(value);
+    await startMealCycle(value);
     setInputMode('idle');
     console.log('Input mode reset to idle after starting meal cycle');
   };
@@ -89,11 +90,11 @@ const Dashboard: React.FC = () => {
     setInputMode('idle');
   };
   
-  const handleAbandonConfirm = () => {
-    console.log('Dashboard: Confirming abandon of meal cycle');
-    const result = abandonMealCycle();
-    console.log('Abandon meal cycle result:', result);
-    setShowAbandonConfirm(false);
+  const handleAbandonConfirm = async () => {
+    const success = await abandonMealCycle();
+    if (success) {
+      setShowAbandonConfirm(false);
+    }
   };
 
   const renderOfflineWarning = () => {
@@ -125,6 +126,7 @@ const Dashboard: React.FC = () => {
           description="Enter your blood glucose before eating"
           onSubmit={handlePreprandialSubmit}
           onCancel={() => setInputMode('idle')}
+          isLoading={isStartingMealCycle}
         />
       );
     }
@@ -151,13 +153,10 @@ const Dashboard: React.FC = () => {
       );
     }
     
-    if (activeMealCycle || pendingMealCycle) {
-      const cycleToUse = activeMealCycle || pendingMealCycle;
-      
-      console.log('Rendering for cycle:', cycleToUse);
-      
+    const cycleToUse = activeMealCycle || pendingMealCycle;
+    
+    if (cycleToUse) {
       if (!cycleToUse.startTime || cycleToUse.startTime === 0) {
-        console.log('Showing FirstBiteButton');
         return (
           <div className="w-full">
             <FirstBiteButton
@@ -168,11 +167,10 @@ const Dashboard: React.FC = () => {
           </div>
         );
       } else {
-        console.log('Showing MealCycleTimer');
         return (
           <div className="w-full">
             <MealCycleTimer
-              mealCycle={activeMealCycle}
+              mealCycle={cycleToUse}
               onTakeReading={handleTakeReading}
               onAbandon={() => setShowAbandonConfirm(true)}
             />
@@ -181,7 +179,6 @@ const Dashboard: React.FC = () => {
       }
     }
     
-    console.log('Showing StartMealCycle');
     return (
       <StartMealCycle
         onStartAdhoc={handleStartAdhoc}

@@ -1,15 +1,15 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 interface GlucoseInputProps {
   title: string;
   description: string;
   onSubmit: (value: number) => void;
-  onCancel?: () => void;
-  defaultValue?: number;
+  onCancel: () => void;
+  isLoading?: boolean;
 }
 
 const GlucoseInput: React.FC<GlucoseInputProps> = ({
@@ -17,76 +17,76 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
   description,
   onSubmit,
   onCancel,
-  defaultValue = 100
+  isLoading = false
 }) => {
-  const [value, setValue] = useState(defaultValue.toString());
+  const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    setValue(inputValue);
-    
-    // Validate input
-    if (inputValue === '') {
-      setError('Please enter a value');
-    } else if (isNaN(Number(inputValue))) {
-      setError('Please enter a valid number');
-    } else if (Number(inputValue) < 20 || Number(inputValue) > 600) {
-      setError('Value must be between 20 and 600');
-    } else {
-      setError(null);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const numericValue = parseFloat(value);
     
-    const numValue = Number(value);
-    if (!error && !isNaN(numValue)) {
-      onSubmit(numValue);
+    if (isNaN(numericValue)) {
+      setError('Please enter a valid number');
+      return;
     }
+    
+    if (numericValue < 0 || numericValue > 500) {
+      setError('Please enter a value between 0 and 500');
+      return;
+    }
+    
+    setError(null);
+    onSubmit(numericValue);
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <form onSubmit={handleSubmit}>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Input
-                className="glucose-input text-2xl"
-                type="number"
-                inputMode="decimal"
-                value={value}
-                onChange={handleChange}
-                autoFocus
-              />
-              {error && <p className="text-destructive text-sm mt-1">{error}</p>}
-              <p className="text-muted-foreground text-sm mt-1">
-                Enter value in mg/dL
-              </p>
-            </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="text-center">{title}</CardTitle>
+        <CardDescription className="text-center">{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex flex-col items-center">
+            <Input
+              type="number"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Enter glucose value"
+              className="text-center text-2xl h-16 w-32"
+              disabled={isLoading}
+            />
+            {error && (
+              <p className="text-destructive text-sm mt-2">{error}</p>
+            )}
           </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="flex flex-col space-y-2">
+        <Button
+          onClick={handleSubmit}
+          className="w-full"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            'Submit'
           )}
-          <Button 
-            type="submit" 
-            disabled={!!error || value === ''}
-            className="ml-auto"
-          >
-            Submit
-          </Button>
-        </CardFooter>
-      </form>
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="w-full"
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+      </CardFooter>
     </Card>
   );
 };

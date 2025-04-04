@@ -1,4 +1,3 @@
-
 export type GlucoseReading = {
   id: string;
   value: number; // Blood glucose value
@@ -16,6 +15,7 @@ export type MealCycle = {
   preprandialReading?: GlucoseReading;
   postprandialReadings: Record<number, GlucoseReading>; // Key is minutes (20, 40, etc.)
   status: 'active' | 'completed' | 'abandoned';
+  archived?: boolean; // Flag to indicate if the meal cycle is archived
   notes?: string;
   createdAt: number;
   updatedAt: number;

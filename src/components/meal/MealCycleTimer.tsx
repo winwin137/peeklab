@@ -129,6 +129,9 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   };
   
   const handleAbandon = () => {
+    if (mealCycle.status === 'abandoned') {
+      return; // Prevent double abandonment
+    }
     console.log('MealCycleTimer: Abandoning meal cycle');
     onAbandon();
   };
@@ -141,17 +144,22 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
             <CardTitle>Active Meal Cycle</CardTitle>
             <CardDescription>
               Started {mealCycle.startTime ? formatDistanceToNow(mealCycle.startTime, { addSuffix: true }) : 'a moment ago'}
+              {mealCycle.status === 'abandoned' && (
+                <span className="text-destructive ml-2">(Abandoned)</span>
+              )}
             </CardDescription>
           </div>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="text-destructive hover:bg-destructive/10" 
-            onClick={handleAbandon}
-            title="Cancel meal cycle"
-          >
-            <XCircle className="h-6 w-6" />
-          </Button>
+          {mealCycle.status !== 'abandoned' && (
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="text-destructive hover:bg-destructive/10" 
+              onClick={handleAbandon}
+              title="Cancel meal cycle"
+            >
+              <XCircle className="h-6 w-6" />
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -239,14 +247,16 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
         </div>
       </CardContent>
       <CardFooter>
-        <Button 
-          variant="destructive" 
-          className="w-full" 
-          onClick={handleAbandon}
-        >
-          <XCircle className="h-4 w-4 mr-2" />
-          Abandon Cycle
-        </Button>
+        {mealCycle.status !== 'abandoned' && (
+          <Button 
+            variant="destructive" 
+            className="w-full" 
+            onClick={handleAbandon}
+          >
+            <XCircle className="h-4 w-4 mr-2" />
+            Abandon Cycle
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
