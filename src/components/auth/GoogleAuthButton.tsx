@@ -16,9 +16,19 @@ const GoogleAuthButton: React.FC = () => {
     } catch (error) {
       console.error("Failed to sign in with Google:", error);
       
-      // Check for the specific unauthorized domain error
-      if (error instanceof Error && error.message.includes('auth/unauthorized-domain')) {
-        setError("This domain is not authorized for Google sign-in. Please add it to your Firebase authentication settings.");
+      // Display user-friendly error message
+      if (error instanceof Error) {
+        if (error.message.includes('auth/unauthorized-domain')) {
+          setError("This domain is not authorized for Google sign-in. Please add it to your Firebase authentication settings.");
+        } else if (error.message.includes('auth/popup-closed-by-user')) {
+          setError("Sign-in popup was closed. Please try again.");
+        } else if (error.message.includes('auth/popup-blocked')) {
+          setError("Sign-in popup was blocked by your browser. Please allow popups for this site.");
+        } else {
+          setError(`Authentication error: ${error.message}`);
+        }
+      } else {
+        setError("An unknown error occurred. Please try again later.");
       }
     }
   };

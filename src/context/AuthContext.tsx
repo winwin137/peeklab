@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -6,7 +7,8 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  AuthError
 } from 'firebase/auth';
 import { auth, githubProvider, googleProvider } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log("Auth state changed:", currentUser ? `User: ${currentUser.displayName}` : "No user");
       setUser(currentUser);
       setLoading(false);
     });
@@ -40,17 +43,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGithub = async () => {
     try {
       setLoading(true);
-      await signInWithPopup(auth, githubProvider);
+      console.log("Starting GitHub sign-in process");
+      const result = await signInWithPopup(auth, githubProvider);
+      console.log("GitHub sign-in successful", result.user.displayName);
       toast({
         title: "Success",
         description: "You are now signed in!",
       });
     } catch (error) {
+      console.error("GitHub sign-in error:", error);
+      const authError = error as AuthError;
       toast({
-        title: "Error signing in",
-        description: error instanceof Error ? error.message : "Unknown error",
+        title: "Error signing in with GitHub",
+        description: authError.code || (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
+      throw error; // Rethrow for component level handling
     } finally {
       setLoading(false);
     }
@@ -68,11 +76,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (error) {
       console.error("Google sign-in error:", error);
+      const authError = error as AuthError;
       toast({
         title: "Error signing in with Google",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: authError.code || (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
+      throw error; // Rethrow for component level handling
     } finally {
       setLoading(false);
     }
@@ -81,17 +91,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithEmail = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log("Starting email sign-in for:", email);
       await signInWithEmailAndPassword(auth, email, password);
+      console.log("Email sign-in successful");
       toast({
         title: "Success",
         description: "You are now signed in!",
       });
     } catch (error) {
+      console.error("Email sign-in error:", error);
+      const authError = error as AuthError;
       toast({
         title: "Error signing in",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: authError.code || (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
+      throw error; // Rethrow for component level handling
     } finally {
       setLoading(false);
     }
@@ -100,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerWithEmail = async (email: string, password: string, displayName: string) => {
     try {
       setLoading(true);
+      console.log("Starting email registration for:", email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Update the user's profile with display name
@@ -107,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await updateProfile(userCredential.user, {
           displayName: displayName
         });
+        console.log("User profile updated with display name:", displayName);
       }
       
       toast({
@@ -114,11 +131,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Your account has been created successfully!",
       });
     } catch (error) {
+      console.error("Email registration error:", error);
+      const authError = error as AuthError;
       toast({
         title: "Error creating account",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: authError.code || (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
+      throw error; // Rethrow for component level handling
     } finally {
       setLoading(false);
     }
@@ -126,12 +146,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      console.log("Signing out user");
       await firebaseSignOut(auth);
+      console.log("User signed out successfully");
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
     } catch (error) {
+      console.error("Sign out error:", error);
       toast({
         title: "Error signing out",
         description: error instanceof Error ? error.message : "Unknown error",
