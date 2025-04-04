@@ -13,6 +13,11 @@ const FirstBiteButton: React.FC<FirstBiteButtonProps> = ({
   onFirstBite,
   preprandialValue
 }) => {
+  const handleClick = () => {
+    console.log('First bite button clicked');
+    onFirstBite();
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -35,7 +40,7 @@ const FirstBiteButton: React.FC<FirstBiteButtonProps> = ({
       </CardContent>
       <CardFooter>
         <Button
-          onClick={onFirstBite}
+          onClick={handleClick}
           className="w-full text-lg py-6"
           size="lg"
         >

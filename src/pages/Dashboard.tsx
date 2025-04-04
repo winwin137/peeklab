@@ -46,7 +46,11 @@ const Dashboard: React.FC = () => {
     } else {
       console.log('No active meal cycle');
     }
-  }, [activeMealCycle]);
+
+    if (pendingMealCycle) {
+      console.log('Pending meal cycle:', pendingMealCycle);
+    }
+  }, [activeMealCycle, pendingMealCycle]);
   
   const handleStartMeal = () => {
     setInputMode('preprandial');
@@ -57,12 +61,14 @@ const Dashboard: React.FC = () => {
   };
   
   const handlePreprandialSubmit = (value: number) => {
+    console.log('Starting meal cycle with preprandial value:', value);
     const result = startMealCycle(value);
     console.log('Started meal cycle with result:', result);
     setInputMode('idle');
   };
   
   const handleFirstBite = () => {
+    console.log('Recording first bite');
     recordFirstBite();
   };
   
@@ -148,10 +154,12 @@ const Dashboard: React.FC = () => {
     if (pendingMealCycle) {
       console.log('Showing FirstBiteButton for pending meal cycle');
       return (
-        <FirstBiteButton
-          onFirstBite={handleFirstBite}
-          preprandialValue={pendingMealCycle.preprandialReading?.value}
-        />
+        <div className="w-full">
+          <FirstBiteButton
+            onFirstBite={handleFirstBite}
+            preprandialValue={pendingMealCycle.preprandialReading?.value}
+          />
+        </div>
       );
     }
     
@@ -161,19 +169,23 @@ const Dashboard: React.FC = () => {
       if (!activeMealCycle.startTime || activeMealCycle.startTime === 0) {
         console.log('Showing FirstBiteButton');
         return (
-          <FirstBiteButton
-            onFirstBite={handleFirstBite}
-            preprandialValue={activeMealCycle.preprandialReading?.value}
-          />
+          <div className="w-full">
+            <FirstBiteButton
+              onFirstBite={handleFirstBite}
+              preprandialValue={activeMealCycle.preprandialReading?.value}
+            />
+          </div>
         );
       } else {
         console.log('Showing MealCycleTimer');
         return (
-          <MealCycleTimer
-            mealCycle={activeMealCycle}
-            onTakeReading={handleTakeReading}
-            onAbandon={() => setShowAbandonConfirm(true)}
-          />
+          <div className="w-full">
+            <MealCycleTimer
+              mealCycle={activeMealCycle}
+              onTakeReading={handleTakeReading}
+              onAbandon={() => setShowAbandonConfirm(true)}
+            />
+          </div>
         );
       }
     }

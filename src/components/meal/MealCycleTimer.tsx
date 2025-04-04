@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useNotifications } from '@/hooks/useNotifications';
 import { MealCycle } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
-import { XCircle, Clock, AlertCircle } from 'lucide-react';
+import { XCircle, Clock, AlertCircle, Timer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 interface MealCycleTimerProps {
@@ -28,6 +28,8 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   // Update elapsed time every second
   useEffect(() => {
     if (!mealCycle.startTime) return;
+    
+    console.log('MealCycleTimer: Setting up timer with startTime', mealCycle.startTime);
     
     const updateElapsedTime = () => {
       const now = Date.now();
@@ -61,7 +63,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       
       // If all readings are due/overdue, return the first one
       const firstPending = pendingIntervals[0];
-      const status = getNotificationStatus(firstPending);
       return {
         minutesMark: firstPending,
         timeRemaining: 0
@@ -156,11 +157,11 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
             </CardDescription>
           </div>
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="icon" 
             className="text-destructive hover:bg-destructive/10" 
             onClick={onAbandon}
-            title="Cancel for testing"
+            title="Cancel meal cycle"
           >
             <XCircle className="h-6 w-6" />
           </Button>
@@ -168,7 +169,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col items-center">
-          <div className="timer-circle h-24 w-24 mb-2">
+          <div className="timer-circle h-24 w-24 rounded-full bg-muted flex items-center justify-center mb-2">
             <div className="text-2xl font-semibold text-foreground">
               {mealCycle.startTime ? formatElapsedTime() : '--:--'}
             </div>
@@ -181,30 +182,36 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
           </div>
         </div>
         
-        <div className="w-full bg-muted rounded-full h-2.5">
-          <div 
-            className="bg-peekdiet-primary h-2.5 rounded-full" 
-            style={{ width: `${calculateProgress()}%` }}
-          />
+        <div className="w-full space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>0:00</span>
+            <span>3:00:00</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2.5">
+            <div 
+              className="bg-peekdiet-primary h-2.5 rounded-full" 
+              style={{ width: `${calculateProgress()}%` }}
+            />
+          </div>
         </div>
 
         {nextReading && (
-          <div className="mt-4 bg-muted/50 p-3 rounded-lg">
+          <div className="mt-4 bg-accent/30 p-4 rounded-lg border border-accent">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">
+                <Timer className="h-5 w-5 text-accent-foreground" />
+                <span className="text-base font-medium">
                   {nextReading.timeRemaining > 0 
                     ? `Next reading in ${formatCountdown(nextReading.timeRemaining)}`
                     : `${nextReading.minutesMark}-minute reading due now!`
                   }
                 </span>
               </div>
-              <span className="text-xs font-medium text-muted-foreground">
+              <span className="text-sm font-medium text-accent-foreground">
                 {nextReading.minutesMark} min
               </span>
             </div>
-            <Progress value={calculateCountdownProgress()} className="h-1.5" />
+            <Progress value={calculateCountdownProgress()} className="h-2" />
           </div>
         )}
         
@@ -246,10 +253,11 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       </CardContent>
       <CardFooter>
         <Button 
-          variant="outline" 
-          className="w-full text-destructive" 
+          variant="destructive" 
+          className="w-full" 
           onClick={onAbandon}
         >
+          <XCircle className="h-4 w-4 mr-2" />
           Abandon Cycle
         </Button>
       </CardFooter>
