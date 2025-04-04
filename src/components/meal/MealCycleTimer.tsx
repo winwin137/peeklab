@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useNotifications } from '@/hooks/useNotifications';
 import { MealCycle } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
+import { XCircle } from 'lucide-react';
 
 interface MealCycleTimerProps {
   mealCycle: MealCycle;
@@ -94,10 +95,23 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Active Meal Cycle</CardTitle>
-        <CardDescription>
-          Started {mealCycle.startTime ? formatDistanceToNow(mealCycle.startTime, { addSuffix: true }) : 'a moment ago'}
-        </CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>Active Meal Cycle</CardTitle>
+            <CardDescription>
+              Started {mealCycle.startTime ? formatDistanceToNow(mealCycle.startTime, { addSuffix: true }) : 'a moment ago'}
+            </CardDescription>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-destructive hover:bg-destructive/10" 
+            onClick={onAbandon}
+            title="Cancel for testing"
+          >
+            <XCircle className="h-6 w-6" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col items-center">
