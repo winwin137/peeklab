@@ -127,7 +127,10 @@ const EmailAuthForm: React.FC = () => {
 
       {authMode === 'login' ? (
         <Form {...loginForm}>
-          <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            loginForm.handleSubmit(onLoginSubmit)(e);
+          }} className="space-y-4">
             <FormField
               control={loginForm.control}
               name="email"
@@ -161,7 +164,10 @@ const EmailAuthForm: React.FC = () => {
         </Form>
       ) : (
         <Form {...registerForm}>
-          <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            registerForm.handleSubmit(onRegisterSubmit)(e);
+          }} className="space-y-4">
             <FormField
               control={registerForm.control}
               name="email"
