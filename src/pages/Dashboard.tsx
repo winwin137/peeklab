@@ -116,7 +116,8 @@ const Dashboard: React.FC = () => {
     
     // Normal view modes
     if (activeMealCycle) {
-      if (!activeMealCycle.startTime) {
+      // Check if meal cycle exists but first bite time doesn't exist or is 0
+      if (!activeMealCycle.startTime || activeMealCycle.startTime === 0) {
         // Show first bite button if meal cycle started but first bite not recorded
         return (
           <FirstBiteButton

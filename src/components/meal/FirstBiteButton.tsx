@@ -18,8 +18,14 @@ const FirstBiteButton: React.FC<FirstBiteButtonProps> = ({
       <CardHeader>
         <CardTitle className="text-center">Ready to Eat?</CardTitle>
         <CardDescription className="text-center">
-          We've recorded your preprandial reading of{' '}
-          <span className="font-semibold">{preprandialValue} mg/dL</span>
+          {preprandialValue ? (
+            <span>
+              We've recorded your preprandial reading of{' '}
+              <span className="font-semibold">{preprandialValue} mg/dL</span>
+            </span>
+          ) : (
+            <span>Let us know when you take your first bite</span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex justify-center">
