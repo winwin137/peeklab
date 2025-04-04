@@ -8,9 +8,9 @@ import GlucoseInput from '@/components/glucose/GlucoseInput';
 import FirstBiteButton from '@/components/meal/FirstBiteButton';
 import MealCycleTimer from '@/components/meal/MealCycleTimer';
 import MealCycleList from '@/components/meal/MealCycleList';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, CloudOff } from 'lucide-react';
+import { AlertTriangle, CloudOff, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type InputMode = 'idle' | 'preprandial' | 'postprandial' | 'adhoc';
@@ -220,18 +220,19 @@ const Dashboard: React.FC = () => {
       
       <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
         <DialogContent>
+          <DialogTitle className="text-center">Abandon Meal Cycle?</DialogTitle>
+          <DialogDescription className="text-center">
+            This will {activeMealCycle?.postprandialReadings && Object.keys(activeMealCycle.postprandialReadings).length === 0 
+              ? "completely remove your current meal cycle" 
+              : "mark your current meal cycle as abandoned"}. You cannot undo this action.
+          </DialogDescription>
+          
           <div className="p-6 text-center space-y-4">
             <div className="flex justify-center">
               <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-destructive" />
+                <Trash2 className="h-6 w-6 text-destructive" />
               </div>
             </div>
-            
-            <h3 className="text-lg font-medium">Abandon Meal Cycle?</h3>
-            <p className="text-sm text-muted-foreground">
-              This will end your current meal cycle and all data will be marked as abandoned.
-              You cannot undo this action.
-            </p>
             
             <div className="flex space-x-2 justify-center mt-4">
               <Button variant="outline" onClick={() => setShowAbandonConfirm(false)}>

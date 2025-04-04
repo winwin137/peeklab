@@ -8,6 +8,7 @@ import {
   updateDoc, 
   doc, 
   getDocs,
+  deleteDoc,
   Timestamp,
   serverTimestamp,
   enableNetwork,
@@ -396,44 +397,64 @@ export const useMealCycles = () => {
     try {
       console.log('Abandoning meal cycle:', activeMealCycle.id);
       
-      if (isOffline || !navigator.onLine) {
-        console.log('Abandoning meal cycle offline');
-        if (pendingMealCycle) {
-          setPendingMealCycle(null);
-        }
-        
-        // Update state locally
-        setMealCycles(prev => prev.map(cycle => 
-          cycle.id === activeMealCycle.id 
-            ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
-            : cycle
-        ));
-        
+      if (pendingMealCycle) {
+        console.log('Removing pending meal cycle from state');
+        setPendingMealCycle(null);
         setActiveMealCycle(null);
         
         toast({
           title: "Meal cycle abandoned",
-          description: "Your current meal cycle has been abandoned. You can start a new one.",
+          description: "Your pending meal cycle has been removed.",
         });
         
         return true;
       }
       
-      await updateDoc(doc(db, 'mealCycles', activeMealCycle.id), {
-        status: 'abandoned',
-        updatedAt: Date.now()
-      });
+      if (isOffline || !navigator.onLine) {
+        console.log('Abandoning meal cycle offline');
+        
+        if (activeMealCycle.id.startsWith('temp_') || !activeMealCycle.id) {
+          setMealCycles(prev => prev.filter(cycle => cycle.id !== activeMealCycle.id));
+        } else {
+          setMealCycles(prev => prev.map(cycle => 
+            cycle.id === activeMealCycle.id 
+              ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
+              : cycle
+          ));
+        }
+        
+        setActiveMealCycle(null);
+        
+        toast({
+          title: "Meal cycle abandoned",
+          description: "Your current meal cycle has been abandoned. Your changes will sync when you're back online.",
+        });
+        
+        return true;
+      }
       
-      console.log('Updated meal cycle in Firestore to abandoned status');
+      if (activeMealCycle.postprandialReadings && 
+          Object.keys(activeMealCycle.postprandialReadings).length === 0) {
+        console.log('Deleting meal cycle completely:', activeMealCycle.id);
+        
+        await deleteDoc(doc(db, 'mealCycles', activeMealCycle.id));
+        
+        setMealCycles(prev => prev.filter(cycle => cycle.id !== activeMealCycle.id));
+      } else {
+        console.log('Marking meal cycle as abandoned:', activeMealCycle.id);
+        
+        await updateDoc(doc(db, 'mealCycles', activeMealCycle.id), {
+          status: 'abandoned',
+          updatedAt: Date.now()
+        });
+        
+        setMealCycles(prev => prev.map(cycle => 
+          cycle.id === activeMealCycle.id 
+            ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
+            : cycle
+        ));
+      }
       
-      // Update local state
-      setMealCycles(prev => prev.map(cycle => 
-        cycle.id === activeMealCycle.id 
-          ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
-          : cycle
-      ));
-      
-      // Clear the active meal cycle
       setActiveMealCycle(null);
       
       toast({
