@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -88,7 +89,7 @@ export const useMealCycles = () => {
       
       const newCycle: Omit<MealCycle, 'id'> = {
         userId: user.uid,
-        startTime: 0,
+        startTime: 0, // Important: startTime is 0, not null or undefined
         preprandialReading: { id: 'temp', ...preprandialReading },
         postprandialReadings: {},
         status: 'active',
@@ -113,6 +114,7 @@ export const useMealCycles = () => {
         preprandialReading: readingWithId
       };
       
+      // Update both state variables to ensure consistency
       setMealCycles(prev => [createdCycle, ...prev]);
       setActiveMealCycle(createdCycle);
       
@@ -123,6 +125,7 @@ export const useMealCycles = () => {
       
       return createdCycle;
     } catch (error) {
+      console.error("Error starting meal cycle:", error);
       toast({
         title: "Error starting meal cycle",
         description: error instanceof Error ? error.message : "Unknown error",

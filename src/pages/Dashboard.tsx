@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMealCycles } from '@/hooks/useMealCycles';
 import { useNotifications } from '@/hooks/useNotifications';
 import Header from '@/components/layout/Header';
@@ -30,7 +29,19 @@ const Dashboard: React.FC = () => {
   const [currentMinutesMark, setCurrentMinutesMark] = useState<number | null>(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   
-  // Handlers for starting meal cycle
+  useEffect(() => {
+    if (activeMealCycle) {
+      console.log('Active meal cycle:', {
+        id: activeMealCycle.id,
+        startTime: activeMealCycle.startTime,
+        preprandial: activeMealCycle.preprandialReading,
+        status: activeMealCycle.status
+      });
+    } else {
+      console.log('No active meal cycle');
+    }
+  }, [activeMealCycle]);
+  
   const handleStartMeal = () => {
     setInputMode('preprandial');
   };
@@ -39,24 +50,21 @@ const Dashboard: React.FC = () => {
     setInputMode('adhoc');
   };
   
-  // Handler for submitting preprandial reading
   const handlePreprandialSubmit = (value: number) => {
-    startMealCycle(value);
+    const result = startMealCycle(value);
+    console.log('Started meal cycle with result:', result);
     setInputMode('idle');
   };
   
-  // Handler for first bite button
   const handleFirstBite = () => {
     recordFirstBite();
   };
   
-  // Handler for taking a reading at a specific minute mark
   const handleTakeReading = (minutesMark: number) => {
     setCurrentMinutesMark(minutesMark);
     setInputMode('postprandial');
   };
   
-  // Handler for submitting postprandial reading
   const handlePostprandialSubmit = (value: number) => {
     if (currentMinutesMark !== null) {
       recordPostprandialReading(currentMinutesMark, value);
@@ -65,22 +73,17 @@ const Dashboard: React.FC = () => {
     setCurrentMinutesMark(null);
   };
   
-  // Handler for adhoc reading
   const handleAdhocSubmit = (value: number) => {
-    // In a real app, would store adhoc readings separately
     console.log('Adhoc reading:', value);
     setInputMode('idle');
   };
   
-  // Handler for abandoning meal cycle
   const handleAbandonConfirm = () => {
     abandonMealCycle();
     setShowAbandonConfirm(false);
   };
   
-  // Content based on current state
   const renderContent = () => {
-    // Input modes
     if (inputMode === 'preprandial') {
       return (
         <GlucoseInput
@@ -114,11 +117,11 @@ const Dashboard: React.FC = () => {
       );
     }
     
-    // Normal view modes
     if (activeMealCycle) {
-      // Check if meal cycle exists but first bite time doesn't exist or is 0
+      console.log('Rendering for active meal cycle with startTime:', activeMealCycle.startTime);
+      
       if (!activeMealCycle.startTime || activeMealCycle.startTime === 0) {
-        // Show first bite button if meal cycle started but first bite not recorded
+        console.log('Showing FirstBiteButton');
         return (
           <FirstBiteButton
             onFirstBite={handleFirstBite}
@@ -126,7 +129,7 @@ const Dashboard: React.FC = () => {
           />
         );
       } else {
-        // Show the meal cycle timer
+        console.log('Showing MealCycleTimer');
         return (
           <MealCycleTimer
             mealCycle={activeMealCycle}
@@ -137,7 +140,7 @@ const Dashboard: React.FC = () => {
       }
     }
     
-    // Default view
+    console.log('Showing StartMealCycle');
     return (
       <StartMealCycle
         onStartAdhoc={handleStartAdhoc}
@@ -160,7 +163,6 @@ const Dashboard: React.FC = () => {
         </div>
       </main>
       
-      {/* Abandon confirmation dialog */}
       <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
         <DialogContent>
           <div className="p-6 text-center space-y-4">
