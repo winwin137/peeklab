@@ -6,10 +6,18 @@ import { useAuth } from '@/context/AuthContext';
 const GoogleAuthButton: React.FC = () => {
   const { signInWithGoogle, loading } = useAuth();
 
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("Failed to sign in with Google:", error);
+    }
+  };
+
   return (
     <Button 
       variant="outline" 
-      onClick={signInWithGoogle} 
+      onClick={handleGoogleSignIn} 
       disabled={loading}
       className="w-full flex items-center gap-2"
     >

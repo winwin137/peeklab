@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -60,14 +59,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      await signInWithPopup(auth, googleProvider);
+      console.log("Starting Google sign-in process");
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Google sign-in successful", result.user.displayName);
       toast({
         title: "Success",
         description: "You are now signed in with Google!",
       });
     } catch (error) {
+      console.error("Google sign-in error:", error);
       toast({
-        title: "Error signing in",
+        title: "Error signing in with Google",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
