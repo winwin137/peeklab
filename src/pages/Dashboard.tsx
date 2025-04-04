@@ -61,9 +61,9 @@ const Dashboard: React.FC = () => {
   
   const handlePreprandialSubmit = (value: number) => {
     console.log('Starting meal cycle with preprandial value:', value);
-    const result = startMealCycle(value);
-    console.log('Started meal cycle with result:', result);
+    startMealCycle(value);
     setInputMode('idle');
+    console.log('Input mode reset to idle after starting meal cycle');
   };
   
   const handleFirstBite = () => {
@@ -149,31 +149,19 @@ const Dashboard: React.FC = () => {
       );
     }
     
-    // Check for pending meal cycle first (this handles the offline scenario)
-    if (pendingMealCycle) {
-      console.log('Showing FirstBiteButton for pending meal cycle');
-      return (
-        <div className="w-full">
-          <FirstBiteButton
-            onFirstBite={handleFirstBite}
-            preprandialValue={pendingMealCycle.preprandialReading?.value}
-            uniqueId={pendingMealCycle.uniqueId}
-          />
-        </div>
-      );
-    }
-    
-    if (activeMealCycle) {
-      console.log('Rendering for active meal cycle with startTime:', activeMealCycle.startTime);
+    if (activeMealCycle || pendingMealCycle) {
+      const cycleToUse = activeMealCycle || pendingMealCycle;
       
-      if (!activeMealCycle.startTime || activeMealCycle.startTime === 0) {
+      console.log('Rendering for cycle:', cycleToUse);
+      
+      if (!cycleToUse.startTime || cycleToUse.startTime === 0) {
         console.log('Showing FirstBiteButton');
         return (
           <div className="w-full">
             <FirstBiteButton
               onFirstBite={handleFirstBite}
-              preprandialValue={activeMealCycle.preprandialReading?.value}
-              uniqueId={activeMealCycle.uniqueId}
+              preprandialValue={cycleToUse.preprandialReading?.value}
+              uniqueId={cycleToUse.uniqueId}
             />
           </div>
         );
