@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { CloudOff } from 'lucide-react';
 
 // This version number should be updated whenever significant changes are made
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 const Footer: React.FC = () => {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
