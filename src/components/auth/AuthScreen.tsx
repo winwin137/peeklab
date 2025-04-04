@@ -1,15 +1,19 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GithubAuthButton from './GithubAuthButton';
 import GoogleAuthButton from './GoogleAuthButton';
 import EmailAuthForm from './EmailAuthForm';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
 
 // This version number should be updated whenever significant changes are made
 const APP_VERSION = '1.6.0';
 
 const AuthScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('social');
+  const { createTestAccount, loading } = useAuth();
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-peekdiet-light to-background">
@@ -44,6 +48,18 @@ const AuthScreen: React.FC = () => {
               <EmailAuthForm />
             </TabsContent>
           </Tabs>
+          
+          {/* Test Account Button */}
+          <div className="pt-4 border-t">
+            <Button 
+              variant="outline" 
+              className="w-full text-sm"
+              onClick={createTestAccount}
+              disabled={loading}
+            >
+              Use Test Account (test@peekdiet.com / Asdf1234!)
+            </Button>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-sm text-center text-muted-foreground">

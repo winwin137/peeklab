@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -21,6 +20,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   registerWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  createTestAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -163,6 +163,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Function to create a test account with predefined credentials
+  const createTestAccount = async () => {
+    try {
+      setLoading(true);
+      const testEmail = "test@peekdiet.com";
+      const testPassword = "Asdf1234!";
+      const testDisplayName = "Test User";
+      
+      console.log("Creating test account with:", testEmail);
+      
+      try {
+        // Try to create a new user
+        const userCredential = await createUserWithEmailAndPassword(auth, testEmail, testPassword);
+        
+        // Update the user's profile with display name
+        if (userCredential.user) {
+          await updateProfile(userCredential.user, {
+            displayName: testDisplayName
+          });
+          console.log("Test account created successfully:", testDisplayName);
+          
+          toast({
+            title: "Test Account Created",
+            description: `Email: ${testEmail}, Password: ${testPassword}`,
+          });
+        }
+      } catch (createError: any) {
+        // If the user already exists, just try to sign in
+        if (createError.code === 'auth/email-already-in-use') {
+          console.log("Test account already exists, signing in...");
+          await signInWithEmail(testEmail, testPassword);
+          toast({
+            title: "Using Existing Test Account",
+            description: `Signed in with Email: ${testEmail}, Password: ${testPassword}`,
+          });
+        } else {
+          throw createError;
+        }
+      }
+    } catch (error) {
+      console.error("Test account error:", error);
+      const authError = error as AuthError;
+      toast({
+        title: "Error creating test account",
+        description: authError.code || (error instanceof Error ? error.message : "Unknown error"),
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -173,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithEmail,
         registerWithEmail,
         signOut,
+        createTestAccount,
       }}
     >
       {children}
