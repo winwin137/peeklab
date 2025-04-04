@@ -1,9 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GithubAuthButton from './GithubAuthButton';
+import GoogleAuthButton from './GoogleAuthButton';
+import EmailAuthForm from './EmailAuthForm';
 
 const AuthScreen: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>('social');
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-peekdiet-light to-background">
       <Card className="w-full max-w-md">
@@ -23,7 +28,20 @@ const AuthScreen: React.FC = () => {
               Monitor your blood glucose levels and take control of your health
             </p>
           </div>
-          <GithubAuthButton />
+
+          <Tabs defaultValue="social" onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="social">Social</TabsTrigger>
+              <TabsTrigger value="email">Email</TabsTrigger>
+            </TabsList>
+            <TabsContent value="social" className="space-y-4 pt-4">
+              <GoogleAuthButton />
+              <GithubAuthButton />
+            </TabsContent>
+            <TabsContent value="email" className="pt-4">
+              <EmailAuthForm />
+            </TabsContent>
+          </Tabs>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-sm text-center text-muted-foreground">

@@ -1,17 +1,24 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
   signInWithPopup, 
   signOut as firebaseSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile
 } from 'firebase/auth';
-import { auth, githubProvider } from '@/lib/firebase';
+import { auth, githubProvider, googleProvider } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signInWithGithub: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -50,6 +57,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true);
+      await signInWithPopup(auth, googleProvider);
+      toast({
+        title: "Success",
+        description: "You are now signed in with Google!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error signing in",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Success",
+        description: "You are now signed in!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error signing in",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerWithEmail = async (email: string, password: string, displayName: string) => {
+    try {
+      setLoading(true);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update the user's profile with display name
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+          displayName: displayName
+        });
+      }
+      
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error creating account",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
@@ -72,6 +144,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         loading,
         signInWithGithub,
+        signInWithGoogle,
+        signInWithEmail,
+        registerWithEmail,
         signOut,
       }}
     >
