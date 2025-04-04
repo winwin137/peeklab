@@ -1,7 +1,13 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, GithubAuthProvider, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  enableIndexedDbPersistence,
+  CACHE_SIZE_UNLIMITED,
+  initializeFirestore,
+  connectFirestoreEmulator 
+} from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAnalytics } from 'firebase/analytics';
 
@@ -18,6 +24,28 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Initialize Firestore with settings optimized for offline use
+const db = initializeFirestore(app, {
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED
+});
+
+// Enable offline persistence
+try {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time
+      console.warn('Persistence could not be enabled: multiple tabs open');
+    } else if (err.code === 'unimplemented') {
+      // The current browser does not support all of the features required for persistence
+      console.warn('Persistence not supported by this browser');
+    } else {
+      console.error('Error enabling persistence:', err);
+    }
+  });
+} catch (error) {
+  console.warn('Error with persistence setup:', error);
+}
 
 // Get Firebase services
 export const auth = getAuth(app);
@@ -40,7 +68,6 @@ githubProvider.setCustomParameters({
 });
 
 // Export other Firebase services
-export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // Initialize analytics only in browser environment
@@ -53,6 +80,6 @@ try {
 } catch (error) {
   console.warn("Analytics failed to initialize:", error);
 }
-export { analytics };
 
+export { analytics, db };
 export default app;
