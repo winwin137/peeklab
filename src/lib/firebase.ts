@@ -4,14 +4,14 @@ import { getAuth, GithubAuthProvider, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Replace this with your Firebase config
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // Replace with your actual API key
-  authDomain: "peekdiet.firebaseapp.com",
-  projectId: "peekdiet",
-  storageBucket: "peekdiet.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-key",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "peekdiet.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "peekdiet",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "peekdiet.appspot.com",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789:web:abc123def456"
 };
 
 // Initialize Firebase
