@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useMealCycles } from '@/hooks/useMealCycles';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -9,7 +10,8 @@ import MealCycleTimer from '@/components/meal/MealCycleTimer';
 import MealCycleList from '@/components/meal/MealCycleList';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CloudOff } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type InputMode = 'idle' | 'preprandial' | 'postprandial' | 'adhoc';
 
@@ -20,7 +22,10 @@ const Dashboard: React.FC = () => {
     startMealCycle, 
     recordFirstBite, 
     recordPostprandialReading, 
-    abandonMealCycle 
+    abandonMealCycle,
+    isOffline,
+    pendingMealCycle,
+    error
   } = useMealCycles();
   
   const { notifications } = useNotifications(activeMealCycle);
@@ -82,6 +87,27 @@ const Dashboard: React.FC = () => {
     abandonMealCycle();
     setShowAbandonConfirm(false);
   };
+
+  const renderOfflineWarning = () => {
+    if (!isOffline) return null;
+    
+    return (
+      <Card className="mb-4 border-destructive bg-destructive/10">
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <CloudOff className="h-5 w-5 text-destructive" />
+            <CardTitle className="text-base text-destructive">Offline Mode</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <CardDescription className="text-destructive/90">
+            You're currently offline. Some features will be limited until your connection is restored.
+            Your data will sync when you're back online.
+          </CardDescription>
+        </CardContent>
+      </Card>
+    );
+  };
   
   const renderContent = () => {
     if (inputMode === 'preprandial') {
@@ -113,6 +139,17 @@ const Dashboard: React.FC = () => {
           description="Enter your current blood glucose"
           onSubmit={handleAdhocSubmit}
           onCancel={() => setInputMode('idle')}
+        />
+      );
+    }
+    
+    // Check for pending meal cycle first (this handles the offline scenario)
+    if (pendingMealCycle) {
+      console.log('Showing FirstBiteButton for pending meal cycle');
+      return (
+        <FirstBiteButton
+          onFirstBite={handleFirstBite}
+          preprandialValue={pendingMealCycle.preprandialReading?.value}
         />
       );
     }
@@ -155,7 +192,19 @@ const Dashboard: React.FC = () => {
       
       <main className="flex-1 container max-w-md mx-auto p-4">
         <div className="space-y-6">
+          {renderOfflineWarning()}
           {renderContent()}
+          
+          {error && (
+            <Card className="border-destructive bg-destructive/10 mt-4">
+              <CardContent className="pt-4">
+                <p className="text-destructive text-sm">
+                  <AlertTriangle className="h-4 w-4 inline mr-1" />
+                  {error}
+                </p>
+              </CardContent>
+            </Card>
+          )}
           
           {mealCycles.length > 0 && inputMode === 'idle' && (
             <MealCycleList mealCycles={mealCycles} />

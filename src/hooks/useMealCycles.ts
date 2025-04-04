@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   collection, 
   query, 
@@ -10,24 +9,73 @@ import {
   doc, 
   getDocs,
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  enableNetwork,
+  disableNetwork
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { MealCycle, GlucoseReading } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
+interface PendingAction {
+  type: 'start' | 'firstBite' | 'reading' | 'abandon';
+  data: any;
+  timestamp: number;
+}
+
 export const useMealCycles = () => {
   const { user } = useAuth();
   const [mealCycles, setMealCycles] = useState<MealCycle[]>([]);
   const [activeMealCycle, setActiveMealCycle] = useState<MealCycle | null>(null);
+  const [pendingMealCycle, setPendingMealCycle] = useState<Partial<MealCycle> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const { toast } = useToast();
+  const networkListenerAdded = useRef(false);
+
+  useEffect(() => {
+    if (networkListenerAdded.current) return;
+    
+    const handleOnline = () => {
+      setIsOffline(false);
+      enableNetwork(db).catch(console.error);
+      toast({ 
+        title: "You're back online",
+        description: "Your data will now sync with the server."
+      });
+    };
+    
+    const handleOffline = () => {
+      setIsOffline(true);
+      disableNetwork(db).catch(console.error);
+      toast({ 
+        title: "You're offline",
+        description: "The app will continue to work, but changes won't be saved to the server until you're back online.",
+        variant: "destructive"
+      });
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    setIsOffline(!navigator.onLine);
+    
+    networkListenerAdded.current = true;
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [toast]);
 
   useEffect(() => {
     if (!user) {
       setMealCycles([]);
       setActiveMealCycle(null);
+      setPendingMealCycle(null);
       setLoading(false);
       return;
     }
@@ -35,6 +83,7 @@ export const useMealCycles = () => {
     const fetchMealCycles = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         const q = query(
           collection(db, 'mealCycles'),
@@ -42,41 +91,45 @@ export const useMealCycles = () => {
           orderBy('createdAt', 'desc')
         );
         
-        const querySnapshot = await getDocs(q);
-        const cycles: MealCycle[] = [];
-        let active = null;
-        
-        querySnapshot.forEach((doc) => {
-          const cycle = { 
-            id: doc.id, 
-            ...doc.data() 
-          } as MealCycle;
+        try {
+          const querySnapshot = await getDocs(q);
+          const cycles: MealCycle[] = [];
+          let active = null;
           
-          cycles.push(cycle);
+          querySnapshot.forEach((doc) => {
+            const cycle = { 
+              id: doc.id, 
+              ...doc.data() 
+            } as MealCycle;
+            
+            cycles.push(cycle);
+            
+            if (cycle.status === 'active') {
+              active = cycle;
+            }
+          });
           
-          if (cycle.status === 'active') {
-            active = cycle;
+          setMealCycles(cycles);
+          setActiveMealCycle(active);
+        } catch (err) {
+          console.error("Error fetching meal cycles:", err);
+          if (isOffline || !navigator.onLine) {
+            setError("You're currently offline. Your data will sync when you're back online.");
+          } else {
+            setError("Could not connect to the database. Please try again later.");
           }
-        });
-        
-        setMealCycles(cycles);
-        setActiveMealCycle(active);
-      } catch (error) {
-        toast({
-          title: "Error fetching meal cycles",
-          description: error instanceof Error ? error.message : "Unknown error",
-          variant: "destructive",
-        });
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchMealCycles();
-  }, [user, toast]);
+  }, [user, isOffline, toast]);
 
   const startMealCycle = async (preprandialValue: number) => {
     if (!user) return null;
+    setError(null);
     
     try {
       const now = Date.now();
@@ -87,9 +140,31 @@ export const useMealCycles = () => {
         type: 'preprandial'
       };
       
+      const tempCycle: Partial<MealCycle> = {
+        userId: user.uid,
+        startTime: 0,
+        preprandialReading: { 
+          id: 'temp_' + now, 
+          ...preprandialReading 
+        },
+        postprandialReadings: {},
+        status: 'active',
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      if (isOffline || !navigator.onLine) {
+        setPendingMealCycle(tempCycle);
+        toast({
+          title: "Preprandial reading saved",
+          description: "You're offline, but you can continue with your meal cycle. Your data will sync when you're back online.",
+        });
+        return tempCycle;
+      }
+      
       const newCycle: Omit<MealCycle, 'id'> = {
         userId: user.uid,
-        startTime: 0, // Important: startTime is 0, not null or undefined
+        startTime: 0,
         preprandialReading: { id: 'temp', ...preprandialReading },
         postprandialReadings: {},
         status: 'active',
@@ -97,33 +172,40 @@ export const useMealCycles = () => {
         updatedAt: now
       };
       
-      const docRef = await addDoc(collection(db, 'mealCycles'), newCycle);
-      
-      const readingWithId: GlucoseReading = {
-        id: `${docRef.id}_pre`,
-        ...preprandialReading
-      };
-      
-      await updateDoc(doc(db, 'mealCycles', docRef.id), {
-        preprandialReading: readingWithId
-      });
-      
-      const createdCycle: MealCycle = {
-        id: docRef.id,
-        ...newCycle,
-        preprandialReading: readingWithId
-      };
-      
-      // Update both state variables to ensure consistency
-      setMealCycles(prev => [createdCycle, ...prev]);
-      setActiveMealCycle(createdCycle);
-      
-      toast({
-        title: "Meal cycle started",
-        description: "Your preprandial reading has been recorded. Press 'First Bite' when you start eating.",
-      });
-      
-      return createdCycle;
+      try {
+        const docRef = await addDoc(collection(db, 'mealCycles'), newCycle);
+        
+        const readingWithId: GlucoseReading = {
+          id: `${docRef.id}_pre`,
+          ...preprandialReading
+        };
+        
+        await updateDoc(doc(db, 'mealCycles', docRef.id), {
+          preprandialReading: readingWithId
+        });
+        
+        const createdCycle: MealCycle = {
+          id: docRef.id,
+          ...newCycle,
+          preprandialReading: readingWithId
+        };
+        
+        setMealCycles(prev => [createdCycle, ...prev]);
+        setActiveMealCycle(createdCycle);
+        setPendingMealCycle(null);
+        
+        toast({
+          title: "Meal cycle started",
+          description: "Your preprandial reading has been recorded. Press 'First Bite' when you start eating.",
+        });
+        
+        return createdCycle;
+      } catch (err) {
+        console.error("Error with Firestore, using local storage instead:", err);
+        setPendingMealCycle(tempCycle);
+        setError("Could not save to database. Working in offline mode now.");
+        return tempCycle;
+      }
     } catch (error) {
       console.error("Error starting meal cycle:", error);
       toast({
@@ -131,44 +213,95 @@ export const useMealCycles = () => {
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
+      setError("Failed to start meal cycle. Please try again.");
       return null;
     }
   };
 
   const recordFirstBite = async () => {
-    if (!activeMealCycle || !user) return null;
+    if (!user) return null;
+    setError(null);
     
     try {
       const now = Date.now();
       
-      await updateDoc(doc(db, 'mealCycles', activeMealCycle.id), {
-        startTime: now,
-        updatedAt: now
-      });
+      if (pendingMealCycle) {
+        const updatedCycle = {
+          ...pendingMealCycle,
+          startTime: now,
+          updatedAt: now
+        };
+        
+        setPendingMealCycle(updatedCycle);
+        
+        toast({
+          title: "First bite recorded",
+          description: "Your meal cycle timer has started. You'll receive notifications for glucose readings.",
+        });
+        
+        return updatedCycle;
+      }
       
-      const updatedCycle = {
-        ...activeMealCycle,
-        startTime: now,
-        updatedAt: now
-      };
+      if (!activeMealCycle) {
+        toast({
+          title: "No active meal cycle",
+          description: "Please start a meal cycle first.",
+          variant: "destructive",
+        });
+        return null;
+      }
       
-      setActiveMealCycle(updatedCycle);
-      setMealCycles(prev => prev.map(cycle => 
-        cycle.id === updatedCycle.id ? updatedCycle : cycle
-      ));
-      
-      toast({
-        title: "First bite recorded",
-        description: "Your meal cycle timer has started. You'll receive notifications for glucose readings.",
-      });
-      
-      return updatedCycle;
+      try {
+        await updateDoc(doc(db, 'mealCycles', activeMealCycle.id), {
+          startTime: now,
+          updatedAt: now
+        });
+        
+        const updatedCycle = {
+          ...activeMealCycle,
+          startTime: now,
+          updatedAt: now
+        };
+        
+        setActiveMealCycle(updatedCycle);
+        setMealCycles(prev => prev.map(cycle => 
+          cycle.id === updatedCycle.id ? updatedCycle : cycle
+        ));
+        
+        toast({
+          title: "First bite recorded",
+          description: "Your meal cycle timer has started. You'll receive notifications for glucose readings.",
+        });
+        
+        return updatedCycle;
+      } catch (err) {
+        console.error("Error recording first bite:", err);
+        setError("Could not save to database. Working in offline mode now.");
+        
+        if (activeMealCycle) {
+          const updatedCycle = {
+            ...activeMealCycle,
+            startTime: now,
+            updatedAt: now
+          };
+          
+          setActiveMealCycle(updatedCycle);
+          
+          toast({
+            title: "First bite recorded locally",
+            description: "Your data will sync when you're back online.",
+          });
+          
+          return updatedCycle;
+        }
+      }
     } catch (error) {
       toast({
         title: "Error recording first bite",
         description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
+      setError("Failed to record first bite. Please try again.");
       return null;
     }
   };
@@ -284,7 +417,10 @@ export const useMealCycles = () => {
   return {
     mealCycles,
     activeMealCycle,
+    pendingMealCycle,
     loading,
+    isOffline,
+    error,
     startMealCycle,
     recordFirstBite,
     recordPostprandialReading,
