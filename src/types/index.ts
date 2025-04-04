@@ -11,6 +11,7 @@ export type GlucoseReading = {
 export type MealCycle = {
   id: string;
   userId: string;
+  uniqueId: string; // Unique identifier for meal cycles
   startTime: number; // Timestamp when the cycle started (First Bite)
   preprandialReading?: GlucoseReading;
   postprandialReadings: Record<number, GlucoseReading>; // Key is minutes (20, 40, etc.)

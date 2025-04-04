@@ -73,6 +73,11 @@ const MealCycleList: React.FC<MealCycleListProps> = ({ mealCycles, onSelect }) =
                   {cycle.startTime 
                     ? format(cycle.startTime, 'p') 
                     : 'Not started'}
+                  {cycle.uniqueId && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ID: {cycle.uniqueId.substring(0, 8)}
+                    </span>
+                  )}
                 </CardDescription>
               </div>
               <Badge 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { 
   collection, 
@@ -23,6 +24,13 @@ interface PendingAction {
   data: any;
   timestamp: number;
 }
+
+// Function to generate a unique ID for meal cycles
+const generateUniqueId = (): string => {
+  const timestamp = Date.now();
+  const randomStr = Math.random().toString(36).substring(2, 8);
+  return `mc-${timestamp}-${randomStr}`;
+};
 
 export const useMealCycles = () => {
   const { user } = useAuth();
@@ -133,6 +141,7 @@ export const useMealCycles = () => {
     
     try {
       const now = Date.now();
+      const uniqueCycleId = generateUniqueId();
       
       const preprandialReading: Omit<GlucoseReading, 'id'> = {
         value: preprandialValue,
@@ -150,7 +159,8 @@ export const useMealCycles = () => {
         postprandialReadings: {},
         status: 'active',
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
+        uniqueId: uniqueCycleId
       };
       
       if (isOffline || !navigator.onLine) {
@@ -169,7 +179,8 @@ export const useMealCycles = () => {
         postprandialReadings: {},
         status: 'active',
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
+        uniqueId: uniqueCycleId
       };
       
       try {
@@ -196,7 +207,7 @@ export const useMealCycles = () => {
         
         toast({
           title: "Meal cycle started",
-          description: "Your preprandial reading has been recorded. Press 'First Bite' when you start eating.",
+          description: `Your preprandial reading has been recorded (ID: ${uniqueCycleId.substring(0, 8)}). Press 'First Bite' when you start eating.`,
         });
         
         return createdCycle;

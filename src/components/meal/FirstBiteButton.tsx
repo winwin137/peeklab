@@ -7,11 +7,13 @@ import { Utensils } from 'lucide-react';
 interface FirstBiteButtonProps {
   onFirstBite: () => void;
   preprandialValue?: number;
+  uniqueId?: string;
 }
 
 const FirstBiteButton: React.FC<FirstBiteButtonProps> = ({ 
   onFirstBite,
-  preprandialValue
+  preprandialValue,
+  uniqueId
 }) => {
   const handleClick = () => {
     console.log('First bite button clicked');
@@ -31,6 +33,9 @@ const FirstBiteButton: React.FC<FirstBiteButtonProps> = ({
             <span>
               We've recorded your preprandial reading of{' '}
               <span className="font-semibold">{preprandialValue} mg/dL</span>
+              {uniqueId && (
+                <div className="mt-1 text-xs">Meal Cycle ID: {uniqueId.substring(0, 8)}</div>
+              )}
             </span>
           ) : (
             <span>Let us know when you take your first bite</span>

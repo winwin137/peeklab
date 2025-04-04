@@ -160,6 +160,7 @@ const Dashboard: React.FC = () => {
           <FirstBiteButton
             onFirstBite={handleFirstBite}
             preprandialValue={pendingMealCycle.preprandialReading?.value}
+            uniqueId={pendingMealCycle.uniqueId}
           />
         </div>
       );
@@ -175,6 +176,7 @@ const Dashboard: React.FC = () => {
             <FirstBiteButton
               onFirstBite={handleFirstBite}
               preprandialValue={activeMealCycle.preprandialReading?.value}
+              uniqueId={activeMealCycle.uniqueId}
             />
           </div>
         );
