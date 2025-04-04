@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -7,7 +6,7 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 import { auth, githubProvider } from '@/lib/firebase';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;

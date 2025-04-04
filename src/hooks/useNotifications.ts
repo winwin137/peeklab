@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '@/hooks/use-toast';
 import { MealCycle } from '@/types';
 
 const NOTIFICATION_INTERVALS = [20, 40, 60, 90, 120, 180]; // minutes

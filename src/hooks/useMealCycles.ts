@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -15,7 +14,7 @@ import {
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { MealCycle, GlucoseReading } from '@/types';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const useMealCycles = () => {
   const { user } = useAuth();
@@ -24,7 +23,6 @@ export const useMealCycles = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch user's meal cycles
   useEffect(() => {
     if (!user) {
       setMealCycles([]);
@@ -55,7 +53,6 @@ export const useMealCycles = () => {
           
           cycles.push(cycle);
           
-          // Check if any cycle is active
           if (cycle.status === 'active') {
             active = cycle;
           }
@@ -77,7 +74,6 @@ export const useMealCycles = () => {
     fetchMealCycles();
   }, [user, toast]);
 
-  // Start a new meal cycle with preprandial reading
   const startMealCycle = async (preprandialValue: number) => {
     if (!user) return null;
     
@@ -92,7 +88,7 @@ export const useMealCycles = () => {
       
       const newCycle: Omit<MealCycle, 'id'> = {
         userId: user.uid,
-        startTime: 0, // Will be set when first bite is recorded
+        startTime: 0,
         preprandialReading: { id: 'temp', ...preprandialReading },
         postprandialReadings: {},
         status: 'active',
@@ -102,13 +98,11 @@ export const useMealCycles = () => {
       
       const docRef = await addDoc(collection(db, 'mealCycles'), newCycle);
       
-      // Update the reading with proper ID
       const readingWithId: GlucoseReading = {
         id: `${docRef.id}_pre`,
         ...preprandialReading
       };
       
-      // Update the document with the reading ID
       await updateDoc(doc(db, 'mealCycles', docRef.id), {
         preprandialReading: readingWithId
       });
@@ -138,7 +132,6 @@ export const useMealCycles = () => {
     }
   };
 
-  // Record first bite and start the timer
   const recordFirstBite = async () => {
     if (!activeMealCycle || !user) return null;
     
@@ -166,8 +159,6 @@ export const useMealCycles = () => {
         description: "Your meal cycle timer has started. You'll receive notifications for glucose readings.",
       });
       
-      // Schedule notifications here in a real app
-      
       return updatedCycle;
     } catch (error) {
       toast({
@@ -179,13 +170,11 @@ export const useMealCycles = () => {
     }
   };
 
-  // Record a postprandial reading
   const recordPostprandialReading = async (minutesMark: number, value: number) => {
     if (!activeMealCycle || !user) return null;
     
     try {
       const now = Date.now();
-      // Check if the reading is too late (7+ minutes after scheduled time)
       const expectedTime = activeMealCycle.startTime + (minutesMark * 60 * 1000);
       const isLate = now > (expectedTime + (7 * 60 * 1000));
       
@@ -206,13 +195,11 @@ export const useMealCycles = () => {
         minutesMark
       };
       
-      // Update the meal cycle with the new reading
       const updatedReadings = {
         ...activeMealCycle.postprandialReadings,
         [minutesMark]: newReading
       };
       
-      // Check if this is the final reading (180 minutes)
       const isComplete = minutesMark === 180;
       const updatedStatus = isComplete ? 'completed' : 'active';
       
@@ -258,7 +245,6 @@ export const useMealCycles = () => {
     }
   };
 
-  // Abandon current meal cycle
   const abandonMealCycle = async () => {
     if (!activeMealCycle || !user) return false;
     
