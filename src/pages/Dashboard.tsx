@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useMealCycles } from '@/hooks/useMealCycles';
 import { useNotifications } from '@/hooks/useNotifications';
 import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 import StartMealCycle from '@/components/meal/StartMealCycle';
 import GlucoseInput from '@/components/glucose/GlucoseInput';
 import FirstBiteButton from '@/components/meal/FirstBiteButton';
@@ -211,6 +212,8 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </main>
+      
+      <Footer />
       
       <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
         <DialogContent>
