@@ -90,7 +90,9 @@ const Dashboard: React.FC = () => {
   };
   
   const handleAbandonConfirm = () => {
-    abandonMealCycle();
+    console.log('Dashboard: Confirming abandon of meal cycle');
+    const result = abandonMealCycle();
+    console.log('Abandon meal cycle result:', result);
     setShowAbandonConfirm(false);
   };
 

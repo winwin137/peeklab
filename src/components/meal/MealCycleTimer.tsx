@@ -126,16 +126,11 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   
   const handleTakeReading = (minutesMark: number) => {
     onTakeReading(minutesMark);
-    setTimeout(() => {
-      window.location.reload();
-    }, 300);
   };
   
   const handleAbandon = () => {
+    console.log('MealCycleTimer: Abandoning meal cycle');
     onAbandon();
-    setTimeout(() => {
-      window.location.reload();
-    }, 300);
   };
   
   return (

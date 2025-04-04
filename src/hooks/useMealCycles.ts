@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { 
   collection, 
@@ -25,7 +24,6 @@ interface PendingAction {
   timestamp: number;
 }
 
-// Function to generate a unique ID for meal cycles
 const generateUniqueId = (): string => {
   const timestamp = Date.now();
   const randomStr = Math.random().toString(36).substring(2, 8);
@@ -396,17 +394,46 @@ export const useMealCycles = () => {
     if (!activeMealCycle || !user) return false;
     
     try {
+      console.log('Abandoning meal cycle:', activeMealCycle.id);
+      
+      if (isOffline || !navigator.onLine) {
+        console.log('Abandoning meal cycle offline');
+        if (pendingMealCycle) {
+          setPendingMealCycle(null);
+        }
+        
+        // Update state locally
+        setMealCycles(prev => prev.map(cycle => 
+          cycle.id === activeMealCycle.id 
+            ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
+            : cycle
+        ));
+        
+        setActiveMealCycle(null);
+        
+        toast({
+          title: "Meal cycle abandoned",
+          description: "Your current meal cycle has been abandoned. You can start a new one.",
+        });
+        
+        return true;
+      }
+      
       await updateDoc(doc(db, 'mealCycles', activeMealCycle.id), {
         status: 'abandoned',
         updatedAt: Date.now()
       });
       
+      console.log('Updated meal cycle in Firestore to abandoned status');
+      
+      // Update local state
       setMealCycles(prev => prev.map(cycle => 
         cycle.id === activeMealCycle.id 
           ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
           : cycle
       ));
       
+      // Clear the active meal cycle
       setActiveMealCycle(null);
       
       toast({
@@ -416,6 +443,7 @@ export const useMealCycles = () => {
       
       return true;
     } catch (error) {
+      console.error("Error abandoning meal cycle:", error);
       toast({
         title: "Error abandoning meal cycle",
         description: error instanceof Error ? error.message : "Unknown error",
