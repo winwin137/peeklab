@@ -44,10 +44,6 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
     const numValue = Number(value);
     if (!error && !isNaN(numValue)) {
       onSubmit(numValue);
-      // Force a re-render after a short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 300);
     }
   };
 
