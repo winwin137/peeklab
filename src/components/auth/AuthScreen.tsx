@@ -6,7 +6,7 @@ import GoogleAuthButton from './GoogleAuthButton';
 import EmailAuthForm from './EmailAuthForm';
 
 // This version number should be updated whenever significant changes are made
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.6.0';
 
 const AuthScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('social');
