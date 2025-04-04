@@ -3,6 +3,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import AuthScreen from '@/components/auth/AuthScreen';
 import Dashboard from './Dashboard';
+import { CloudOff } from 'lucide-react';
 
 const Index: React.FC = () => {
   const { user, loading } = useAuth();
