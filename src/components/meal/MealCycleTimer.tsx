@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +24,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number} | null>(null);
   const { getNotificationStatus } = useNotifications(mealCycle);
   
-  // Update elapsed time every second
   useEffect(() => {
     if (!mealCycle.startTime) return;
     
@@ -36,14 +34,11 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       const elapsed = now - mealCycle.startTime;
       setElapsedTime(elapsed);
       
-      // Find the next reading
       const nextReadingData = findNextReading();
       setNextReading(nextReadingData);
     };
     
-    // Find the next upcoming reading
     const findNextReading = () => {
-      // Sort intervals that haven't been completed
       const pendingIntervals = INTERVALS.filter(
         interval => !mealCycle.postprandialReadings[interval]
       ).sort((a, b) => a - b);
@@ -53,7 +48,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       for (const minutesMark of pendingIntervals) {
         const status = getNotificationStatus(minutesMark);
         if (!status.due) {
-          // This reading is in the future
           return {
             minutesMark,
             timeRemaining: status.timeUntil || 0
@@ -61,7 +55,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
         }
       }
       
-      // If all readings are due/overdue, return the first one
       const firstPending = pendingIntervals[0];
       return {
         minutesMark: firstPending,
@@ -69,16 +62,13 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       };
     };
     
-    // Update immediately
     updateElapsedTime();
     
-    // Then update every second
     const interval = setInterval(updateElapsedTime, 1000);
     
     return () => clearInterval(interval);
   }, [mealCycle.startTime, mealCycle.postprandialReadings, getNotificationStatus]);
   
-  // Formatted elapsed time (mm:ss)
   const formatElapsedTime = () => {
     const totalSeconds = Math.floor(elapsedTime / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -86,7 +76,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  // Format countdown time (mm:ss)
   const formatCountdown = (milliseconds: number) => {
     const totalSeconds = Math.ceil(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -94,7 +83,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  // Formatted start time
   const formatStartTime = () => {
     if (!mealCycle.startTime) return 'Not started';
     
@@ -102,15 +90,13 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
   };
   
-  // Calculate progress
   const calculateProgress = () => {
     if (!mealCycle.startTime) return 0;
     
-    const elapsed = elapsedTime / 1000 / 60; // minutes
-    return Math.min((elapsed / 180) * 100, 100); // 180 mins is the full cycle
+    const elapsed = elapsedTime / 1000 / 60;
+    return Math.min((elapsed / 180) * 100, 100);
   };
   
-  // Calculate countdown progress
   const calculateCountdownProgress = () => {
     if (!nextReading || nextReading.timeRemaining <= 0) return 100;
     
@@ -120,30 +106,36 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     return Math.min(progress, 100);
   };
   
-  // Check which intervals need readings
   const needsReading = (minutesMark: number) => {
-    // If the reading exists in postprandialReadings, it's been done
     if (mealCycle.postprandialReadings[minutesMark]) return false;
     
-    // Check if it's due based on elapsed time
     const status = getNotificationStatus(minutesMark);
-    
     return status.due && !status.overdue;
   };
   
-  // Check which intervals are missed
   const isMissed = (minutesMark: number) => {
-    // If the reading exists, it wasn't missed
     if (mealCycle.postprandialReadings[minutesMark]) return false;
     
-    // Check if it's overdue
     const status = getNotificationStatus(minutesMark);
     return status.overdue;
   };
   
-  // Check which intervals are completed
   const isCompleted = (minutesMark: number) => {
     return !!mealCycle.postprandialReadings[minutesMark];
+  };
+  
+  const handleTakeReading = (minutesMark: number) => {
+    onTakeReading(minutesMark);
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
+  };
+  
+  const handleAbandon = () => {
+    onAbandon();
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
   };
   
   return (
@@ -160,7 +152,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
             variant="outline" 
             size="icon" 
             className="text-destructive hover:bg-destructive/10" 
-            onClick={onAbandon}
+            onClick={handleAbandon}
             title="Cancel meal cycle"
           >
             <XCircle className="h-6 w-6" />
@@ -238,7 +230,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
                 key={minutes}
                 variant={buttonVariant}
                 disabled={disabled}
-                onClick={() => onTakeReading(minutes)}
+                onClick={() => handleTakeReading(minutes)}
                 className={`
                   ${isCompleted(minutes) ? 'text-muted-foreground' : ''}
                   ${isMissed(minutes) ? 'text-destructive opacity-50' : ''}
@@ -255,7 +247,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
         <Button 
           variant="destructive" 
           className="w-full" 
-          onClick={onAbandon}
+          onClick={handleAbandon}
         >
           <XCircle className="h-4 w-4 mr-2" />
           Abandon Cycle

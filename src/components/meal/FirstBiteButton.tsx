@@ -16,6 +16,10 @@ const FirstBiteButton: React.FC<FirstBiteButtonProps> = ({
   const handleClick = () => {
     console.log('First bite button clicked');
     onFirstBite();
+    // Force a re-render by triggering a small timeout
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
   };
 
   return (

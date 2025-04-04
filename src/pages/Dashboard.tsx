@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useMealCycles } from '@/hooks/useMealCycles';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -93,6 +92,9 @@ const Dashboard: React.FC = () => {
   const handleAbandonConfirm = () => {
     abandonMealCycle();
     setShowAbandonConfirm(false);
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
   };
 
   const renderOfflineWarning = () => {

@@ -13,6 +13,22 @@ const StartMealCycle: React.FC<StartMealCycleProps> = ({
   onStartAdhoc,
   onStartMeal
 }) => {
+  const handleStartMeal = () => {
+    onStartMeal();
+    // Force a re-render after a short delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
+  };
+
+  const handleStartAdhoc = () => {
+    onStartAdhoc();
+    // Force a re-render after a short delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -29,10 +45,10 @@ const StartMealCycle: React.FC<StartMealCycleProps> = ({
         </div>
       </CardContent>
       <CardFooter className="flex flex-col space-y-2">
-        <Button onClick={onStartMeal} className="w-full">
+        <Button onClick={handleStartMeal} className="w-full">
           Start Meal Cycle
         </Button>
-        <Button variant="outline" onClick={onStartAdhoc} className="w-full">
+        <Button variant="outline" onClick={handleStartAdhoc} className="w-full">
           Ad-hoc Reading
         </Button>
       </CardFooter>
