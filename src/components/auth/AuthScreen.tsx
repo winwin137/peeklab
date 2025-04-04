@@ -6,6 +6,9 @@ import GithubAuthButton from './GithubAuthButton';
 import GoogleAuthButton from './GoogleAuthButton';
 import EmailAuthForm from './EmailAuthForm';
 
+// This version number should be updated whenever significant changes are made
+const APP_VERSION = '1.0.0';
+
 const AuthScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('social');
 
@@ -46,6 +49,7 @@ const AuthScreen: React.FC = () => {
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-sm text-center text-muted-foreground">
             <p>By signing in, you agree to our terms of service and privacy policy.</p>
+            <p className="mt-1 text-xs">Version {APP_VERSION}</p>
           </div>
         </CardFooter>
       </Card>
