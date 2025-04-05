@@ -1,0 +1,9 @@
+{
+  "name": "peekdiet-data-dump",
+  "version": "1.0.0",
+  "description": "Script to dump user data from Firebase",
+  "main": "dump_user_data.js",
+  "dependencies": {
+    "firebase-admin": "^11.11.1"
+  }
+}
