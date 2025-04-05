@@ -6,7 +6,7 @@ import { MealCycle } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { XCircle, Clock, AlertCircle, Timer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { getCurrentIntervals } from '@/config';
+import { getCurrentIntervals, getCurrentCycleTimeout } from '@/config';
 import GlucoseGraph from './GlucoseGraph';
 import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
 import { convertFirebaseTime } from '@/utils/date';
@@ -35,34 +35,10 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     
     console.log('MealCycleTimer: Setting up timer with startTime', mealCycle.startTime);
     
-    // Initial check for cycle termination
-    const initialElapsed = Date.now() - mealCycle.startTime;
-    const initialMinutesElapsed = initialElapsed / (60 * 1000);
-    const hasAnyReadings = Object.keys(mealCycle.postprandialReadings).length > 0;
-    
-    if (initialMinutesElapsed >= 40) {
-      console.log('MealCycleTimer: Cycle has exceeded 40 minutes, terminating');
-      if (!hasAnyReadings && mealCycle.status !== 'abandoned') {
-        onAbandon();
-      }
-      // Clear the interval immediately
-      return () => {};
-    }
-    
     const updateElapsedTime = () => {
       const now = Date.now();
       const elapsed = now - mealCycle.startTime;
       const minutesElapsed = elapsed / (60 * 1000);
-      
-      // Stop everything if we've passed 40 minutes
-      if (minutesElapsed >= 40) {
-        console.log('MealCycleTimer: Cycle has reached 40 minutes, terminating');
-        if (!hasAnyReadings && mealCycle.status !== 'abandoned') {
-          onAbandon();
-        }
-        // Clear the interval
-        return () => clearInterval(interval);
-      }
       
       setElapsedTime(elapsed);
       const nextReadingData = findNextReading();
@@ -97,7 +73,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     const interval = setInterval(updateElapsedTime, 1000);
     
     return () => clearInterval(interval);
-  }, [mealCycle?.startTime, mealCycle?.postprandialReadings, mealCycle?.status, getNotificationStatus, intervals, onAbandon]);
+  }, [mealCycle?.startTime, mealCycle?.postprandialReadings, mealCycle?.status, getNotificationStatus, intervals]);
   
   const formatElapsedTime = () => {
     const totalSeconds = Math.floor(elapsedTime / 1000);
@@ -169,16 +145,17 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     onAbandon();
   };
 
-  // Add a check to prevent rendering if cycle is past 40 minutes
+  // Add a check to prevent rendering if cycle is past the configured timeout
   if (mealCycle && mealCycle.startTime) {
     const elapsed = Date.now() - mealCycle.startTime;
     const minutesElapsed = elapsed / (60 * 1000);
-    if (minutesElapsed >= 40) {
-      // Force abandon the cycle if it's past 40 minutes
+    const cycleTimeout = getCurrentCycleTimeout();
+    if (minutesElapsed >= cycleTimeout) {
+      // Force abandon the cycle if it's past the timeout
       if (mealCycle.status !== 'abandoned') {
         handleAbandon();
       }
-      return null; // Don't render anything if cycle is past 40 minutes
+      return null; // Don't render anything if cycle is past the timeout
     }
   }
 

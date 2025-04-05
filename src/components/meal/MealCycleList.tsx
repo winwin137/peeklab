@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
 import { convertFirebaseTime } from '@/utils/date';
+import { useMealCycles } from '@/hooks/useMealCycles';
+import { getCurrentCycleTimeout } from '@/config';
+import { Clock } from 'lucide-react';
 
 interface MealCycleListProps {
   mealCycles: MealCycle[];
@@ -12,6 +15,43 @@ interface MealCycleListProps {
 }
 
 const MealCycleList: React.FC<MealCycleListProps> = ({ mealCycles, onSelect }) => {
+  const { activeMealCycle } = useMealCycles();
+  const [timeRemaining, setTimeRemaining] = React.useState<number | null>(null);
+
+  // Update time remaining every second
+  React.useEffect(() => {
+    if (!activeMealCycle?.startTime) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const cycleTimeout = getCurrentCycleTimeout() * 60 * 1000; // Convert to milliseconds
+    const endTime = activeMealCycle.startTime + cycleTimeout;
+
+    const updateTimeRemaining = () => {
+      const now = Date.now();
+      const remaining = endTime - now;
+      setTimeRemaining(remaining > 0 ? remaining : 0);
+    };
+
+    updateTimeRemaining();
+    const interval = setInterval(updateTimeRemaining, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeMealCycle?.startTime]);
+
+  const formatTimeRemaining = (ms: number) => {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    }
+    return `${minutes}m ${seconds}s`;
+  };
+
   if (mealCycles.length === 0) {
     return (
       <div className="text-center p-4">
@@ -22,6 +62,12 @@ const MealCycleList: React.FC<MealCycleListProps> = ({ mealCycles, onSelect }) =
 
   return (
     <div className="space-y-4">
+      {timeRemaining !== null && (
+        <div className="flex items-center justify-center text-amber-500">
+          <Clock className="h-4 w-4 mr-1" />
+          <span>Cycle ends in {formatTimeRemaining(timeRemaining)}</span>
+        </div>
+      )}
       <h2 className="text-xl font-semibold">Recent Meal Cycles</h2>
       
       {mealCycles.slice(0, 5).map(cycle => {

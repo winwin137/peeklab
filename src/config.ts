@@ -59,7 +59,5 @@ export const getCurrentTimeout = () => {
 
 // Helper function to get current cycle timeout
 export const getCurrentCycleTimeout = () => {
-  return TESTING_CONFIG.isTesting 
-    ? TESTING_CONFIG.cycleTimeout.testing 
-    : TESTING_CONFIG.cycleTimeout.original;
+  return TESTING_CONFIG.cycleTimeout.original;
 }; 
