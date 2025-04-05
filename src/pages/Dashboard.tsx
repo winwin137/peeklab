@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, CloudOff, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAdHocReadings } from '@/hooks/useAdHocReadings';
+import { toast } from '@/components/ui/use-toast';
 
 type InputMode = 'idle' | 'preprandial' | 'postprandial' | 'adhoc';
 
@@ -31,6 +33,7 @@ const Dashboard: React.FC = () => {
   } = useMealCycles();
   
   const { notifications } = useNotifications(activeMealCycle);
+  const { createAdHocReading } = useAdHocReadings();
   
   const [inputMode, setInputMode] = useState<InputMode>('idle');
   const [currentMinutesMark, setCurrentMinutesMark] = useState<number | null>(null);
@@ -99,9 +102,22 @@ const Dashboard: React.FC = () => {
     setCurrentMinutesMark(null);
   };
   
-  const handleAdhocSubmit = (value: number) => {
-    console.log('Adhoc reading:', value);
-    setInputMode('idle');
+  const handleAdhocSubmit = async (value: number) => {
+    try {
+      await createAdHocReading(value);
+      toast({
+        title: "Ad-hoc reading saved",
+        description: "Your blood glucose reading has been recorded.",
+      });
+      setInputMode('idle');
+    } catch (error) {
+      console.error('Error saving ad-hoc reading:', error);
+      toast({
+        title: "Error saving reading",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleAbandonConfirm = async () => {

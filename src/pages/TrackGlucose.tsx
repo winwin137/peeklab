@@ -19,4 +19,4 @@ const TrackGlucose: React.FC = () => {
   );
 };
 
-export default TrackGlucose; 
+export default TrackGlucose;

@@ -1,10 +1,13 @@
 export type GlucoseReading = {
   id: string;
+  userId: string;
   value: number; // Blood glucose value
   timestamp: number; // Timestamp when the reading was taken
-  type: 'preprandial' | 'postprandial'; // Before meal or after meal
+  type: 'preprandial' | 'postprandial' | 'adhoc'; // Before meal or after meal
   minutesMark?: number; // For postprandial readings (20, 40, 60, 90, 120, 180)
   notes?: string;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type MealCycle = {

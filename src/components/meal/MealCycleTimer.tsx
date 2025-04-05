@@ -6,14 +6,16 @@ import { MealCycle } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { XCircle, Clock, AlertCircle, Timer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { getCurrentIntervals } from '@/config';
+import GlucoseGraph from './GlucoseGraph';
+import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
+import { convertFirebaseTime } from '@/utils/date';
 
 interface MealCycleTimerProps {
-  mealCycle: MealCycle;
+  mealCycle: MealCycle | null;
   onTakeReading: (minutesMark: number) => void;
   onAbandon: () => void;
 }
-
-const INTERVALS = [20, 40, 60, 90, 120, 180];
 
 const MealCycleTimer: React.FC<MealCycleTimerProps> = ({ 
   mealCycle,
@@ -22,32 +24,63 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number} | null>(null);
-  const { getNotificationStatus } = useNotifications(mealCycle);
+  const { getNotificationStatus, alertState } = useNotifications(mealCycle);
+  
+  // Get current intervals based on environment
+  const intervals = getCurrentIntervals().readings;
+  const maxTime = intervals[intervals.length - 1];
   
   useEffect(() => {
-    if (!mealCycle.startTime) return;
+    if (!mealCycle?.startTime) return;
     
     console.log('MealCycleTimer: Setting up timer with startTime', mealCycle.startTime);
+    
+    // Initial check for cycle termination
+    const initialElapsed = Date.now() - mealCycle.startTime;
+    const initialMinutesElapsed = initialElapsed / (60 * 1000);
+    const hasAnyReadings = Object.keys(mealCycle.postprandialReadings).length > 0;
+    
+    if (initialMinutesElapsed >= 40) {
+      console.log('MealCycleTimer: Cycle has exceeded 40 minutes, terminating');
+      if (!hasAnyReadings && mealCycle.status !== 'abandoned') {
+        onAbandon();
+      }
+      // Clear the interval immediately
+      return () => {};
+    }
     
     const updateElapsedTime = () => {
       const now = Date.now();
       const elapsed = now - mealCycle.startTime;
-      setElapsedTime(elapsed);
+      const minutesElapsed = elapsed / (60 * 1000);
       
+      // Stop everything if we've passed 40 minutes
+      if (minutesElapsed >= 40) {
+        console.log('MealCycleTimer: Cycle has reached 40 minutes, terminating');
+        if (!hasAnyReadings && mealCycle.status !== 'abandoned') {
+          onAbandon();
+        }
+        // Clear the interval
+        return () => clearInterval(interval);
+      }
+      
+      setElapsedTime(elapsed);
       const nextReadingData = findNextReading();
       setNextReading(nextReadingData);
     };
     
     const findNextReading = () => {
-      const pendingIntervals = INTERVALS.filter(
+      // Get all intervals that haven't been completed yet
+      const pendingIntervals = intervals.filter(
         interval => !mealCycle.postprandialReadings[interval]
       ).sort((a, b) => a - b);
       
       if (pendingIntervals.length === 0) return null;
       
+      // Find the first interval that isn't due yet and isn't overdue
       for (const minutesMark of pendingIntervals) {
         const status = getNotificationStatus(minutesMark);
-        if (!status.due) {
+        if (!status.due && !status.overdue) {
           return {
             minutesMark,
             timeRemaining: status.timeUntil || 0
@@ -55,11 +88,8 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
         }
       }
       
-      const firstPending = pendingIntervals[0];
-      return {
-        minutesMark: firstPending,
-        timeRemaining: 0
-      };
+      // If all pending intervals are due or overdue, return null
+      return null;
     };
     
     updateElapsedTime();
@@ -67,7 +97,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     const interval = setInterval(updateElapsedTime, 1000);
     
     return () => clearInterval(interval);
-  }, [mealCycle.startTime, mealCycle.postprandialReadings, getNotificationStatus]);
+  }, [mealCycle?.startTime, mealCycle?.postprandialReadings, mealCycle?.status, getNotificationStatus, intervals, onAbandon]);
   
   const formatElapsedTime = () => {
     const totalSeconds = Math.floor(elapsedTime / 1000);
@@ -84,29 +114,30 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   };
   
   const formatStartTime = () => {
-    if (!mealCycle.startTime) return 'Not started';
+    if (!mealCycle?.startTime) return 'Not started';
     
     const date = new Date(mealCycle.startTime);
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
   };
   
   const calculateProgress = () => {
-    if (!mealCycle.startTime) return 0;
+    if (!mealCycle?.startTime) return 0;
     
     const elapsed = elapsedTime / 1000 / 60;
-    return Math.min((elapsed / 180) * 100, 100);
+    return Math.min((elapsed / maxTime) * 100, 100);
   };
   
   const calculateCountdownProgress = () => {
     if (!nextReading || nextReading.timeRemaining <= 0) return 100;
     
     const minutesMark = nextReading.minutesMark;
-    const totalDuration = minutesMark * 60 * 1000 - (minutesMark > 20 ? (minutesMark - 20) * 60 * 1000 : 0);
+    const totalDuration = minutesMark * 60 * 1000 - (minutesMark > intervals[0] ? (minutesMark - intervals[0]) * 60 * 1000 : 0);
     const progress = ((totalDuration - nextReading.timeRemaining) / totalDuration) * 100;
     return Math.min(progress, 100);
   };
   
   const needsReading = (minutesMark: number) => {
+    if (!mealCycle?.postprandialReadings) return false;
     if (mealCycle.postprandialReadings[minutesMark]) return false;
     
     const status = getNotificationStatus(minutesMark);
@@ -114,6 +145,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   };
   
   const isMissed = (minutesMark: number) => {
+    if (!mealCycle?.postprandialReadings) return false;
     if (mealCycle.postprandialReadings[minutesMark]) return false;
     
     const status = getNotificationStatus(minutesMark);
@@ -121,6 +153,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   };
   
   const isCompleted = (minutesMark: number) => {
+    if (!mealCycle?.postprandialReadings) return false;
     return !!mealCycle.postprandialReadings[minutesMark];
   };
   
@@ -129,136 +162,207 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   };
   
   const handleAbandon = () => {
-    if (mealCycle.status === 'abandoned') {
+    if (!mealCycle || mealCycle.status === 'abandoned') {
       return; // Prevent double abandonment
     }
     console.log('MealCycleTimer: Abandoning meal cycle');
     onAbandon();
   };
+
+  // Add a check to prevent rendering if cycle is past 40 minutes
+  if (mealCycle && mealCycle.startTime) {
+    const elapsed = Date.now() - mealCycle.startTime;
+    const minutesElapsed = elapsed / (60 * 1000);
+    if (minutesElapsed >= 40) {
+      // Force abandon the cycle if it's past 40 minutes
+      if (mealCycle.status !== 'abandoned') {
+        handleAbandon();
+      }
+      return null; // Don't render anything if cycle is past 40 minutes
+    }
+  }
+
+  if (!mealCycle) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>No Active Meal Cycle</CardTitle>
+          <CardDescription>Start a new meal cycle to begin tracking your glucose readings.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+  
+  const averageGlucose = calculateAverageGlucose(mealCycle);
+  const peakGlucose = calculatePeakGlucose(mealCycle);
   
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Active Meal Cycle</CardTitle>
-            <CardDescription>
-              Started {mealCycle.startTime ? formatDistanceToNow(mealCycle.startTime, { addSuffix: true }) : 'a moment ago'}
-              {mealCycle.status === 'abandoned' && (
-                <span className="text-destructive ml-2">(Abandoned)</span>
-              )}
-            </CardDescription>
+    <>
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Active Meal Cycle</CardTitle>
+              <CardDescription>
+                {mealCycle.preprandialReading 
+                  ? `Preprandial reading taken at ${convertFirebaseTime(mealCycle.preprandialReading.timestamp)}`
+                  : 'No preprandial reading'}
+                {mealCycle.status === 'abandoned' && (
+                  <span className="text-destructive ml-2">(Abandoned)</span>
+                )}
+              </CardDescription>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {averageGlucose && (
+                  <span>Average: {averageGlucose} mg/dL</span>
+                )}
+                {peakGlucose && (
+                  <span className="ml-4">Peak: {peakGlucose} mg/dL</span>
+                )}
+              </div>
+            </div>
+            {mealCycle.status !== 'abandoned' && (
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="text-destructive hover:bg-destructive/10" 
+                onClick={handleAbandon}
+                title="Cancel meal cycle"
+              >
+                <XCircle className="h-6 w-6" />
+              </Button>
+            )}
           </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col items-center">
+            <div className="timer-circle h-24 w-24 rounded-full bg-muted flex items-center justify-center mb-2">
+              <div className="text-2xl font-semibold text-foreground">
+                {mealCycle.startTime ? formatElapsedTime() : '--:--'}
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {mealCycle.startTime 
+                ? `First bite: ${convertFirebaseTime(mealCycle.startTime)}`
+                : 'Awaiting first bite'
+              }
+            </div>
+          </div>
+          
+          <div className="w-full space-y-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0:00</span>
+              <span>{Math.floor(maxTime / 60)}:00</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2.5">
+              <div 
+                className="bg-peekdiet-primary h-2.5 rounded-full" 
+                style={{ width: `${calculateProgress()}%` }}
+              />
+            </div>
+          </div>
+
+          {nextReading && (
+            <div className="mt-4 bg-accent/30 p-4 rounded-lg border border-accent">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Timer className="h-5 w-5 text-accent-foreground" />
+                  <span className="text-base font-medium">
+                    {nextReading.timeRemaining > 0 
+                      ? `Next reading in ${formatCountdown(nextReading.timeRemaining)}`
+                      : `${nextReading.minutesMark}-minute reading due now!`
+                    }
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-accent-foreground">
+                  {nextReading.minutesMark} min
+                </span>
+              </div>
+              <Progress value={calculateCountdownProgress()} className="h-2" />
+            </div>
+          )}
+
+          {/* Add Glucose Graph */}
+          {(mealCycle.preprandialReading || Object.keys(mealCycle.postprandialReadings).length > 0) && (
+            <div className="h-32 w-full mt-4">
+              <GlucoseGraph mealCycle={mealCycle} />
+            </div>
+          )}
+          
+          <div className="grid grid-cols-3 gap-2 pt-4">
+            {intervals.map(minutes => {
+              let buttonVariant: 'default' | 'outline' | 'ghost' = 'outline';
+              let buttonText = `${minutes} min`;
+              let disabled = !needsReading(minutes);
+              
+              if (isCompleted(minutes)) {
+                buttonVariant = 'ghost';
+                buttonText = `${minutes} min ✓`;
+              } else if (needsReading(minutes)) {
+                buttonVariant = 'default';
+                buttonText = `${minutes} min!`;
+                disabled = false;
+              } else if (isMissed(minutes)) {
+                buttonVariant = 'ghost';
+                buttonText = `${minutes} min ✗`;
+              }
+              
+              return (
+                <Button 
+                  key={minutes}
+                  variant={buttonVariant}
+                  disabled={disabled}
+                  onClick={() => handleTakeReading(minutes)}
+                  className={`
+                    ${isCompleted(minutes) ? 'text-muted-foreground' : ''}
+                    ${isMissed(minutes) ? 'text-destructive opacity-50' : ''}
+                    ${needsReading(minutes) ? 'animate-pulse' : ''}
+                  `}
+                >
+                  {buttonText}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Stats display */}
+          <div className="grid grid-cols-4 gap-1 text-xs mt-3">
+            <div className="text-muted-foreground text-right">Pre:</div>
+            <div className="font-semibold">
+              {mealCycle.preprandialReading 
+                ? `${mealCycle.preprandialReading.value} mg/dL` 
+                : '—'}
+            </div>
+            
+            <div className="text-muted-foreground text-right">Peak:</div>
+            <div className="font-semibold">
+              {peakGlucose ? `${peakGlucose} mg/dL` : '—'}
+            </div>
+            
+            <div className="text-muted-foreground text-right">Readings:</div>
+            <div className="font-semibold">
+              {Object.keys(mealCycle.postprandialReadings).length + 
+                (mealCycle.preprandialReading ? 1 : 0)}
+            </div>
+            
+            <div className="text-muted-foreground text-right">Status:</div>
+            <div className="font-semibold capitalize">
+              {mealCycle.status}
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
           {mealCycle.status !== 'abandoned' && (
             <Button 
               variant="outline" 
-              size="icon" 
-              className="text-destructive hover:bg-destructive/10" 
+              className="w-full text-destructive hover:bg-destructive/10" 
               onClick={handleAbandon}
-              title="Cancel meal cycle"
             >
-              <XCircle className="h-6 w-6" />
+              Abandon Meal Cycle
             </Button>
           )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col items-center">
-          <div className="timer-circle h-24 w-24 rounded-full bg-muted flex items-center justify-center mb-2">
-            <div className="text-2xl font-semibold text-foreground">
-              {mealCycle.startTime ? formatElapsedTime() : '--:--'}
-            </div>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {mealCycle.startTime 
-              ? `First bite: ${formatStartTime()}`
-              : 'Awaiting first bite'
-            }
-          </div>
-        </div>
-        
-        <div className="w-full space-y-1">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>0:00</span>
-            <span>3:00:00</span>
-          </div>
-          <div className="w-full bg-muted rounded-full h-2.5">
-            <div 
-              className="bg-peekdiet-primary h-2.5 rounded-full" 
-              style={{ width: `${calculateProgress()}%` }}
-            />
-          </div>
-        </div>
-
-        {nextReading && (
-          <div className="mt-4 bg-accent/30 p-4 rounded-lg border border-accent">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Timer className="h-5 w-5 text-accent-foreground" />
-                <span className="text-base font-medium">
-                  {nextReading.timeRemaining > 0 
-                    ? `Next reading in ${formatCountdown(nextReading.timeRemaining)}`
-                    : `${nextReading.minutesMark}-minute reading due now!`
-                  }
-                </span>
-              </div>
-              <span className="text-sm font-medium text-accent-foreground">
-                {nextReading.minutesMark} min
-              </span>
-            </div>
-            <Progress value={calculateCountdownProgress()} className="h-2" />
-          </div>
-        )}
-        
-        <div className="grid grid-cols-3 gap-2 pt-4">
-          {INTERVALS.map(minutes => {
-            let buttonVariant: 'default' | 'outline' | 'ghost' = 'outline';
-            let buttonText = `${minutes} min`;
-            let disabled = !needsReading(minutes);
-            
-            if (isCompleted(minutes)) {
-              buttonVariant = 'ghost';
-              buttonText = `${minutes} min ✓`;
-            } else if (needsReading(minutes)) {
-              buttonVariant = 'default';
-              buttonText = `${minutes} min!`;
-              disabled = false;
-            } else if (isMissed(minutes)) {
-              buttonVariant = 'ghost';
-              buttonText = `${minutes} min ✗`;
-            }
-            
-            return (
-              <Button 
-                key={minutes}
-                variant={buttonVariant}
-                disabled={disabled}
-                onClick={() => handleTakeReading(minutes)}
-                className={`
-                  ${isCompleted(minutes) ? 'text-muted-foreground' : ''}
-                  ${isMissed(minutes) ? 'text-destructive opacity-50' : ''}
-                  ${needsReading(minutes) ? 'animate-pulse' : ''}
-                `}
-              >
-                {buttonText}
-              </Button>
-            );
-          })}
-        </div>
-      </CardContent>
-      <CardFooter>
-        {mealCycle.status !== 'abandoned' && (
-          <Button 
-            variant="destructive" 
-            className="w-full" 
-            onClick={handleAbandon}
-          >
-            <XCircle className="h-4 w-4 mr-2" />
-            Abandon Cycle
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+        </CardFooter>
+      </Card>
+    </>
   );
 };
 

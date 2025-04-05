@@ -1,143 +1,216 @@
-import React, { useEffect } from 'react';
-import { useMealCycles } from '@/hooks/useMealCycles';
+import React, { useState, useMemo } from 'react';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { format } from 'date-fns';
-import { Activity, AlertTriangle } from 'lucide-react';
+import { MealCycle, GlucoseReading } from '@/types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useMealCycles } from '@/hooks/useMealCycles';
+import { useAdHocReadings } from '@/hooks/useAdHocReadings';
+import AdHocReadingCard from '@/components/history/AdHocReadingCard';
+import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
 
 const MealSessions: React.FC = () => {
-  const { mealCycles, loading, error } = useMealCycles();
+  const { mealCycles, loading: mealCyclesLoading } = useMealCycles();
+  const { adHocReadings, loading: adHocReadingsLoading, error: adHocError } = useAdHocReadings();
 
-  useEffect(() => {
-    console.error('MealSessions mounted at:', new Date().toISOString());
-    return () => {
-      console.error('MealSessions unmounted at:', new Date().toISOString());
-    };
-  }, []);
+  console.log('MealSessions - Ad Hoc Readings:', {
+    count: adHocReadings.length,
+    readings: adHocReadings,
+    loading: adHocReadingsLoading,
+    error: adHocError
+  });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="h-12 w-12 rounded-full bg-peekdiet-secondary"></div>
-            <div className="mt-4 h-4 w-32 bg-muted rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
+  // Group readings by day
+  const groupedReadings = useMemo(() => {
+    console.log('Grouping readings...');
+    const groups: { [key: string]: { 
+      date: Date; 
+      mealCycles: MealCycle[]; 
+      adHocReadings: GlucoseReading[];
+      dailyAverage: number | null;
+    } } = {};
+
+    // Process meal cycles
+    mealCycles.forEach(cycle => {
+      const dateKey = format(cycle.startTime, 'yyyy-MM-dd');
+      if (!groups[dateKey]) {
+        groups[dateKey] = {
+          date: new Date(cycle.startTime),
+          mealCycles: [],
+          adHocReadings: [],
+          dailyAverage: null
+        };
+      }
+      groups[dateKey].mealCycles.push(cycle);
+    });
+
+    // Process ad hoc readings
+    adHocReadings.forEach(reading => {
+      console.log('Processing ad hoc reading:', reading);
+      const dateKey = format(reading.timestamp, 'yyyy-MM-dd');
+      if (!groups[dateKey]) {
+        groups[dateKey] = {
+          date: new Date(reading.timestamp),
+          mealCycles: [],
+          adHocReadings: [],
+          dailyAverage: null
+        };
+      }
+      groups[dateKey].adHocReadings.push(reading);
+    });
+
+    // Calculate daily averages
+    Object.values(groups).forEach(group => {
+      const allReadings = [
+        ...group.mealCycles.flatMap(cycle => [
+          cycle.preprandialReading,
+          ...Object.values(cycle.postprandialReadings)
+        ]),
+        ...group.adHocReadings
+      ].filter(reading => 
+        reading && 
+        reading.value !== null && 
+        reading.value !== undefined && 
+        reading.value > 0
+      );
+
+      if (allReadings.length > 0) {
+        const sum = allReadings.reduce((acc, reading) => acc + reading.value, 0);
+        group.dailyAverage = Math.round(sum / allReadings.length);
+      }
+    });
+
+    console.log('Grouped readings:', groups);
+    return groups;
+  }, [mealCycles, adHocReadings]);
+
+  // Sort days in descending order
+  const sortedDays = useMemo(() => {
+    return Object.values(groupedReadings)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [groupedReadings]);
+
+  if (mealCyclesLoading || adHocReadingsLoading) {
+    return <div>Loading...</div>;
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container max-w-md mx-auto p-4">
-          <Card className="border-destructive bg-destructive/10">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                <p className="text-sm">{error}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+  if (adHocError) {
+    console.error('Error with ad hoc readings:', adHocError);
+    return <div>Error loading ad hoc readings: {adHocError.message}</div>;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container max-w-2xl mx-auto p-4">
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Meal Sessions
-            </CardTitle>
-            <CardDescription>
-              Detailed view of your meal tracking sessions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {mealCycles.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No meal sessions recorded yet
-              </p>
-            ) : (
-              <div className="space-y-6">
-                {mealCycles.map((cycle) => (
-                  <Card key={cycle.id} className="hover:bg-accent/5 transition-colors">
-                    <CardContent className="pt-6">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Date</p>
-                          <p className="font-medium">
-                            {format(cycle.startTime, 'PPP p')}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">ID</p>
-                          <p className="font-medium">{cycle.uniqueId}</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Preprandial</p>
-                          <p className="font-medium">
-                            {cycle.preprandialReading?.value ?? 'N/A'} mg/dL
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Status</p>
-                          <p className={`font-medium capitalize ${
-                            cycle.status === 'abandoned' ? 'text-destructive' : ''
-                          }`}>
-                            {cycle.status}
-                          </p>
-                        </div>
-                      </div>
-
-                      {Object.keys(cycle.postprandialReadings).length > 0 && (
-                        <div className="mt-4">
-                          <p className="text-sm text-muted-foreground mb-2">Postprandial Readings</p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {Object.entries(cycle.postprandialReadings)
-                              .sort(([a], [b]) => Number(a) - Number(b))
-                              .map(([minutes, reading]) => (
-                                <div key={reading.id} className="text-center">
-                                  <p className="text-xs text-muted-foreground">{minutes}m</p>
-                                  <p className="font-medium">{reading.value} mg/dL</p>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
+    <div className="space-y-8">
+      {sortedDays.map(({ date, mealCycles, adHocReadings, dailyAverage }) => (
+        <div key={date.toISOString()} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">
+              {format(date, 'PPP')}
+            </h2>
+            {dailyAverage !== null && (
+              <span className="text-lg font-semibold">
+                Daily Average: {dailyAverage} mg/dL
+              </span>
+            )}
+          </div>
+          
+          <div className="space-y-4">
+            {mealCycles.map(cycle => {
+              const averageGlucose = calculateAverageGlucose(cycle);
+              const peakGlucose = calculatePeakGlucose(cycle);
+              
+              return (
+                <Card key={cycle.id}>
+                  <CardHeader>
+                    <CardTitle>
+                      {format(cycle.startTime, 'p')}
+                    </CardTitle>
+                    <CardDescription>
+                      ID: {cycle.uniqueId}
+                      {averageGlucose !== null && (
+                        <span className="ml-2 font-semibold">
+                          Average: {averageGlucose} mg/dL
+                        </span>
                       )}
-
-                      <div className="mt-4 grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Total Readings</p>
-                          <p className="font-medium">
-                            {Object.keys(cycle.postprandialReadings).length + (cycle.preprandialReading ? 1 : 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Peak</p>
-                          <p className="font-medium">
-                            {Math.max(
-                              cycle.preprandialReading?.value || 0,
-                              ...Object.values(cycle.postprandialReadings).map(r => r.value)
-                            )} mg/dL
-                          </p>
-                        </div>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {(cycle.status === 'completed' || 
+                      cycle.status === 'abandoned' ||
+                      Object.keys(cycle.postprandialReadings).length > 0) && (
+                      <div className="h-32 w-full mt-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={[
+                              { name: 'Pre', glucose: cycle.preprandialReading?.value },
+                              ...Object.entries(cycle.postprandialReadings)
+                                .sort(([a], [b]) => Number(a) - Number(b))
+                                .map(([minutes, reading]) => ({
+                                  name: `${minutes}m`,
+                                  glucose: reading.value
+                                }))
+                            ]}
+                            margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                            <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 10 }} />
+                            <Tooltip 
+                              formatter={(value: number) => [`${value} mg/dL`, 'Glucose']}
+                              labelFormatter={(label) => label}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="glucose" 
+                              stroke="#8B5CF6" 
+                              strokeWidth={2} 
+                              dot={{ r: 4 }} 
+                              activeDot={{ r: 6 }} 
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
                       </div>
-                    </CardContent>
-                  </Card>
+                    )}
+                    
+                    <div className="grid grid-cols-4 gap-1 text-xs mt-3">
+                      <div className="text-muted-foreground text-right">Pre:</div>
+                      <div className="font-semibold">
+                        {cycle.preprandialReading 
+                          ? `${cycle.preprandialReading.value} mg/dL` 
+                          : '—'}
+                      </div>
+                      
+                      <div className="text-muted-foreground text-right">Peak:</div>
+                      <div className="font-semibold">
+                        {peakGlucose ? `${peakGlucose} mg/dL` : '—'}
+                      </div>
+                      
+                      <div className="text-muted-foreground text-right">Readings:</div>
+                      <div className="font-semibold">
+                        {Object.keys(cycle.postprandialReadings).length + 
+                          (cycle.preprandialReading ? 1 : 0)}
+                      </div>
+                      
+                      <div className="text-muted-foreground text-right">Status:</div>
+                      <div className="font-semibold capitalize">
+                        {cycle.status}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            
+            {adHocReadings.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-2">Ad Hoc Readings</h3>
+                {adHocReadings.map(reading => (
+                  <AdHocReadingCard key={reading.id} reading={reading} />
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </main>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

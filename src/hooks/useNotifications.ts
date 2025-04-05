@@ -1,127 +1,124 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { MealCycle } from '@/types';
+import { getCurrentTimeout } from '@/config';
+import { 
+  playNotificationSound, 
+  requestNotificationPermission,
+  showBrowserNotification 
+} from '@/utils/notificationSound';
+import { NotificationAlert } from '@/components/notifications/NotificationAlert';
 
 const NOTIFICATION_INTERVALS = [20, 40, 60, 90, 120, 180]; // minutes
 
-export function useNotifications(activeMealCycle: MealCycle | null) {
-  const [notifications, setNotifications] = useState<{
-    [minute: number]: {
-      id: string;
-      scheduled: boolean;
-      sent: boolean;
-      timerId?: number;
-    }
-  }>({});
+export const useNotifications = (mealCycle: MealCycle | null) => {
   const { toast } = useToast();
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('');
+  const [hasNotificationPermission, setHasNotificationPermission] = useState(false);
+  const [lastNotified, setLastNotified] = useState<Record<number, boolean>>({});
 
-  // Schedule all notifications when a meal cycle starts
+  // Request notification permission on mount
   useEffect(() => {
-    if (!activeMealCycle || !activeMealCycle.startTime) return;
-    
-    // Clear any existing timers
-    Object.values(notifications).forEach(notification => {
-      if (notification.timerId) {
-        window.clearTimeout(notification.timerId);
-      }
-    });
-    
-    // Create new notification schedules
-    const newNotifications: typeof notifications = {};
-    
-    NOTIFICATION_INTERVALS.forEach(minutes => {
-      const notificationTime = activeMealCycle.startTime + (minutes * 60 * 1000);
-      const now = Date.now();
-      
-      // Only schedule notifications that are in the future
-      if (notificationTime > now) {
-        const timerId = window.setTimeout(() => {
-          sendNotification(minutes);
-        }, notificationTime - now);
-        
-        newNotifications[minutes] = {
-          id: `${activeMealCycle.id}_${minutes}`,
-          scheduled: true,
-          sent: false,
-          timerId: timerId as unknown as number
-        };
-      } else {
-        // For time intervals that have already passed
-        newNotifications[minutes] = {
-          id: `${activeMealCycle.id}_${minutes}`,
-          scheduled: false,
-          sent: false
-        };
-      }
-    });
-    
-    setNotifications(newNotifications);
-    
-    // Clear timers on cleanup
-    return () => {
-      Object.values(newNotifications).forEach(notification => {
-        if (notification.timerId) {
-          window.clearTimeout(notification.timerId);
-        }
-      });
+    const checkPermission = async () => {
+      const hasPermission = await requestNotificationPermission();
+      setHasNotificationPermission(hasPermission);
     };
-  }, [activeMealCycle?.id, activeMealCycle?.startTime]);
-
-  // Send a notification for a specific minute mark
-  const sendNotification = useCallback((minutesMark: number) => {
-    // In a real app, this would trigger a real push notification
-    // For now, we'll just show a toast
-    toast({
-      title: "Time to check your glucose!",
-      description: `It's been ${minutesMark} minutes since your first bite. Please record your blood glucose reading now.`,
-    });
-    
-    // Update notification status
-    setNotifications(prev => ({
-      ...prev,
-      [minutesMark]: {
-        ...prev[minutesMark],
-        sent: true
-      }
-    }));
-    
-    // Simulate sounds by logging to console
-    console.log(`🔔 Notification sound played for ${minutesMark}-minute mark`);
-  }, [toast]);
-
-  // Check if a notification is due/overdue
-  const getNotificationStatus = useCallback((minutesMark: number) => {
-    if (!activeMealCycle || !activeMealCycle.startTime) {
-      return { due: false, overdue: false };
-    }
-    
-    const notificationTime = activeMealCycle.startTime + (minutesMark * 60 * 1000);
-    const now = Date.now();
-    const lateThreshold = notificationTime + (7 * 60 * 1000); // 7 minutes late
-    
-    return {
-      due: now >= notificationTime,
-      overdue: now >= lateThreshold,
-      timeUntil: notificationTime > now ? notificationTime - now : 0
-    };
-  }, [activeMealCycle?.startTime]);
-
-  // Mark a notification as responded
-  const markNotificationResponded = useCallback((minutesMark: number) => {
-    setNotifications(prev => ({
-      ...prev,
-      [minutesMark]: {
-        ...prev[minutesMark],
-        responded: true
-      }
-    }));
+    checkPermission();
   }, []);
 
+  const showNotification = useCallback((title: string, description: string, isCritical = false, type: 'readingDue' | 'readingOverdue' | 'critical' = 'readingDue') => {
+    if (isCritical) {
+      // Play sound for critical notifications
+      playNotificationSound();
+      
+      // Show browser notification if permission granted
+      if (hasNotificationPermission) {
+        showBrowserNotification(title, {
+          body: description,
+          tag: 'glucose-reading',
+          renotify: true,
+          type
+        });
+      }
+      
+      // Show modal for critical notifications
+      setAlertTitle(title);
+      setAlertMessage(description);
+      setShowAlert(true);
+    } else {
+      // Show toast for non-critical notifications
+      toast({
+        title,
+        description,
+        duration: 5000,
+      });
+    }
+  }, [toast, hasNotificationPermission]);
+
+  const getNotificationStatus = useCallback((minutesMark: number) => {
+    if (!mealCycle?.startTime) {
+      return { due: false, overdue: false, timeUntil: null };
+    }
+
+    const now = Date.now();
+    const scheduledTime = mealCycle.startTime + (minutesMark * 60 * 1000);
+    const timeUntil = scheduledTime - now;
+    const timeout = getCurrentTimeout() * 60 * 1000; // Convert to milliseconds
+
+    // Check if reading is due (within timeout window)
+    const isDue = timeUntil <= 0 && timeUntil > -timeout;
+    
+    // Check if reading is overdue (past timeout window)
+    const isOverdue = timeUntil <= -timeout;
+
+    // If the reading is already completed, it's neither due nor overdue
+    if (mealCycle.postprandialReadings[minutesMark]) {
+      return { due: false, overdue: false, timeUntil: null };
+    }
+
+    return {
+      due: isDue,
+      overdue: isOverdue,
+      timeUntil: timeUntil > 0 ? timeUntil : null
+    };
+  }, [mealCycle?.startTime, mealCycle?.postprandialReadings]);
+
+  useEffect(() => {
+    if (!mealCycle?.startTime) return;
+
+    const checkReadings = () => {
+      const intervals = [20, 40, 60, 90, 120, 180];
+      
+      for (const minutesMark of intervals) {
+        // Skip if reading is already completed
+        if (mealCycle.postprandialReadings[minutesMark]) {
+          continue;
+        }
+
+        const status = getNotificationStatus(minutesMark);
+        
+        // Play sound only once when reading becomes due
+        if (status.due && !lastNotified[minutesMark]) {
+          playNotificationSound();
+          setLastNotified(prev => ({ ...prev, [minutesMark]: true }));
+        }
+      }
+    };
+
+    const interval = setInterval(checkReadings, 1000);
+    return () => clearInterval(interval);
+  }, [mealCycle, getNotificationStatus, lastNotified]);
+
   return {
-    notifications,
-    sendNotification,
+    showNotification,
     getNotificationStatus,
-    markNotificationResponded
+    alertState: {
+      isOpen: showAlert,
+      onClose: () => setShowAlert(false),
+      title: alertTitle,
+      description: alertMessage
+    }
   };
-}
+};

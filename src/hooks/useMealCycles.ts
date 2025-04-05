@@ -1,3 +1,26 @@
+/**
+ * ⚠️ CRITICAL: MEAL CYCLE CORE LOGIC ⚠️
+ * 
+ * DO NOT MODIFY THE FOLLOWING:
+ * - Meal cycle state management
+ * - Data structure and flow
+ * - Core timing logic
+ * - Firebase integration
+ * - Offline sync logic
+ * 
+ * ALLOWED MODIFICATIONS:
+ * - UI/UX improvements
+ * - Bug fixes
+ * - Performance optimizations
+ * - Testing configurations (via config.ts)
+ * 
+ * VIOLATING THESE RULES MAY RESULT IN:
+ * - Data corruption
+ * - Sync failures
+ * - User data loss
+ * - System instability
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { 
   collection, 
@@ -20,6 +43,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { MealCycle, GlucoseReading } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { getCurrentTimeout } from '@/config';
 
 interface PendingAction {
   type: 'start' | 'firstBite' | 'reading' | 'abandon';
@@ -152,11 +176,53 @@ export const useMealCycles = () => {
         
         querySnapshot.forEach((doc) => {
           const data = doc.data();
+          
+          // Convert Firestore Timestamps to milliseconds
+          const createdAt = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toMillis() 
+            : data.createdAt;
+          const updatedAt = data.updatedAt instanceof Timestamp 
+            ? data.updatedAt.toMillis() 
+            : data.updatedAt;
+          const startTime = data.startTime instanceof Timestamp 
+            ? data.startTime.toMillis() 
+            : data.startTime;
+            
+          // Convert preprandial reading timestamp
+          const preprandialReading = data.preprandialReading ? {
+            ...data.preprandialReading,
+            timestamp: data.preprandialReading.timestamp instanceof Timestamp
+              ? data.preprandialReading.timestamp.toMillis()
+              : data.preprandialReading.timestamp,
+            createdAt: data.preprandialReading.createdAt instanceof Timestamp
+              ? data.preprandialReading.createdAt.toMillis()
+              : data.preprandialReading.createdAt,
+            updatedAt: data.preprandialReading.updatedAt instanceof Timestamp
+              ? data.preprandialReading.updatedAt.toMillis()
+              : data.preprandialReading.updatedAt
+          } : undefined;
+          
+          // Convert postprandial readings timestamps
+          const postprandialReadings = data.postprandialReadings ? 
+            Object.entries(data.postprandialReadings).reduce((acc, [key, reading]: [string, any]) => {
+              acc[key] = {
+                ...reading,
+                timestamp: reading.timestamp instanceof Timestamp
+                  ? reading.timestamp.toMillis()
+                  : reading.timestamp
+              };
+              return acc;
+            }, {} as Record<number, GlucoseReading>) : {};
+          
           const cycle = { 
             id: doc.id, 
             ...data,
             status: data.archived ? 'abandoned' : data.status,
-            createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now()
+            createdAt,
+            updatedAt,
+            startTime,
+            preprandialReading,
+            postprandialReadings
           } as MealCycle;
           cycles.push(cycle);
         });
@@ -204,20 +270,24 @@ export const useMealCycles = () => {
     setIsStartingMealCycle(true);
     
     try {
-      const now = Date.now();
+      const now = Timestamp.now();
+      const nowMillis = now.toMillis();
       const uniqueCycleId = generateUniqueId();
       
       const preprandialReading: Omit<GlucoseReading, 'id'> = {
+        userId: user.uid,
         value: preprandialValue,
         timestamp: now,
-        type: 'preprandial'
+        type: 'preprandial',
+        createdAt: now,
+        updatedAt: now
       };
       
       const tempCycle: Partial<MealCycle> = {
         userId: user.uid,
-        startTime: 0,
+        startTime: 0, // Keep this as 0 until first bite
         preprandialReading: { 
-          id: 'temp_' + now, 
+          id: 'temp_' + nowMillis, 
           ...preprandialReading 
         },
         postprandialReadings: {},
@@ -235,7 +305,7 @@ export const useMealCycles = () => {
           title: "Preprandial reading saved",
           description: "You're offline, but you can continue with your meal cycle. Your data will sync when you're back online.",
         });
-        setPendingActions(prev => [...prev, { type: 'start', data: { preprandialValue }, timestamp: now }]);
+        setPendingActions(prev => [...prev, { type: 'start', data: { preprandialValue }, timestamp: nowMillis }]);
         setIsStartingMealCycle(false);
         return tempCycle;
       }
@@ -260,7 +330,7 @@ export const useMealCycles = () => {
           });
         } catch (err) {
           console.error("Error saving to Firestore:", err);
-          setPendingActions(prev => [...prev, { type: 'start', data: { preprandialValue }, timestamp: now }]);
+          setPendingActions(prev => [...prev, { type: 'start', data: { preprandialValue }, timestamp: nowMillis }]);
           toast({
             title: "Offline Mode",
             description: "Your data will sync when you're back online.",
@@ -293,13 +363,14 @@ export const useMealCycles = () => {
     setError(null);
     
     try {
-      const now = Date.now();
+      const now = Timestamp.now();
+      const nowMillis = now.toMillis();
       
       if (pendingMealCycle) {
         const updatedCycle = {
           ...pendingMealCycle,
-          startTime: now,
-          updatedAt: now
+          startTime: nowMillis,
+          updatedAt: nowMillis
         };
         
         // Update both pending and active states
@@ -313,7 +384,7 @@ export const useMealCycles = () => {
         });
         
         if (isOffline || !navigator.onLine) {
-          setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: now }]);
+          setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: nowMillis }]);
           return updatedCycle;
         }
         
@@ -325,7 +396,7 @@ export const useMealCycles = () => {
           });
         } catch (err) {
           console.error("Error saving first bite to Firestore:", err);
-          setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: now }]);
+          setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: nowMillis }]);
         }
         
         return updatedCycle;
@@ -342,8 +413,8 @@ export const useMealCycles = () => {
       
       const updatedCycle = {
         ...activeMealCycle,
-        startTime: now,
-        updatedAt: now
+        startTime: nowMillis,
+        updatedAt: nowMillis
       };
       
       // Update local state immediately
@@ -358,7 +429,7 @@ export const useMealCycles = () => {
       });
       
       if (isOffline || !navigator.onLine) {
-        setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: now }]);
+        setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: nowMillis }]);
         return updatedCycle;
       }
       
@@ -369,7 +440,7 @@ export const useMealCycles = () => {
         });
       } catch (err) {
         console.error("Error saving first bite to Firestore:", err);
-        setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: now }]);
+        setPendingActions(prev => [...prev, { type: 'firstBite', data: {}, timestamp: nowMillis }]);
       }
       
       return updatedCycle;
@@ -388,14 +459,16 @@ export const useMealCycles = () => {
     if (!activeMealCycle || !user) return null;
     
     try {
-      const now = Date.now();
+      const now = Timestamp.now();
+      const nowMillis = now.toMillis();
       const expectedTime = activeMealCycle.startTime + (minutesMark * 60 * 1000);
-      const isLate = now > (expectedTime + (7 * 60 * 1000));
+      const timeoutMinutes = getCurrentTimeout();
+      const isLate = nowMillis > (expectedTime + (timeoutMinutes * 60 * 1000));
       
       if (isLate) {
         toast({
           title: "Reading too late",
-          description: `You're more than 7 minutes late for the ${minutesMark}-minute reading. This reading will not be counted.`,
+          description: `You're more than ${timeoutMinutes} minutes late for the ${minutesMark}-minute reading. This reading will not be counted.`,
           variant: "destructive",
         });
         return null;
@@ -403,10 +476,13 @@ export const useMealCycles = () => {
       
       const newReading: GlucoseReading = {
         id: `${activeMealCycle.id}_${minutesMark}`,
+        userId: user.uid,
         value,
-        timestamp: now,
+        timestamp: nowMillis,
         type: 'postprandial',
-        minutesMark
+        minutesMark,
+        createdAt: nowMillis,
+        updatedAt: nowMillis
       };
       
       const updatedReadings = {
@@ -427,7 +503,7 @@ export const useMealCycles = () => {
         ...activeMealCycle,
         postprandialReadings: updatedReadings,
         status: updatedStatus as ('active' | 'completed'),
-        updatedAt: now
+        updatedAt: nowMillis
       };
       
       setMealCycles(prev => prev.map(cycle => 
@@ -496,9 +572,11 @@ export const useMealCycles = () => {
         if (activeMealCycle.id.startsWith('temp_') || !activeMealCycle.id) {
           setMealCycles(prev => prev.filter(cycle => cycle.id !== activeMealCycle.id));
         } else {
+          const now = Timestamp.now();
+          const nowMillis = now.toMillis();
           setMealCycles(prev => prev.map(cycle => 
             cycle.id === activeMealCycle.id 
-              ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
+              ? { ...cycle, status: 'abandoned', updatedAt: nowMillis } 
               : cycle
           ));
         }
@@ -517,14 +595,16 @@ export const useMealCycles = () => {
       try {
         // Always mark as abandoned, never delete
         console.log('Marking meal cycle as abandoned:', activeMealCycle.id);
+        const now = Timestamp.now();
+        const nowMillis = now.toMillis();
         await updateDoc(doc(db, 'mealCycles', activeMealCycle.id), {
           status: 'abandoned',
-          updatedAt: Date.now()
+          updatedAt: now
         });
         
         setMealCycles(prev => prev.map(cycle => 
           cycle.id === activeMealCycle.id 
-            ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
+            ? { ...cycle, status: 'abandoned', updatedAt: nowMillis } 
             : cycle
         ));
         
@@ -539,13 +619,15 @@ export const useMealCycles = () => {
       } catch (err) {
         console.error("Error saving abandonment to Firestore:", err);
         // If Firestore fails, still update local state
+        const now = Timestamp.now();
+        const nowMillis = now.toMillis();
         setMealCycles(prev => prev.map(cycle => 
           cycle.id === activeMealCycle.id 
-            ? { ...cycle, status: 'abandoned', updatedAt: Date.now() } 
+            ? { ...cycle, status: 'abandoned', updatedAt: nowMillis } 
             : cycle
         ));
         setActiveMealCycle(null);
-        setPendingActions(prev => [...prev, { type: 'abandon', data: {}, timestamp: Date.now() }]);
+        setPendingActions(prev => [...prev, { type: 'abandon', data: {}, timestamp: nowMillis }]);
         
         toast({
           title: "Offline Mode",

@@ -1,67 +1,59 @@
 import { Link, useLocation } from 'react-router-dom';
-import { History, Activity, LineChart, LayoutDashboard, LogOut, Settings, User } from 'lucide-react';
+import { History, Activity, LineChart, LayoutDashboard, LogOut, Settings, User, Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useState } from 'react';
 
 const Navigation = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
     return location.pathname === path || (path === '/dashboard' && location.pathname === '/');
   };
 
+  const navLinks = [
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/history', icon: History, label: 'History' },
+    { path: '/sessions', icon: Activity, label: 'Sessions' },
+    { path: '/track', icon: LineChart, label: 'Track Glucose' }
+  ];
+
   return (
     <nav className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex space-x-8">
-            <Link
-              to="/dashboard"
-              className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                isActive('/dashboard')
-                  ? 'border-peekdiet-primary text-gray-900'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              }`}
+          {/* Mobile menu button */}
+          <div className="flex items-center md:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-500 hover:text-gray-700"
             >
-              <LayoutDashboard className="h-5 w-5 mr-2" />
-              Dashboard
-            </Link>
-            <Link
-              to="/history"
-              className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                isActive('/history')
-                  ? 'border-peekdiet-primary text-gray-900'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              }`}
-            >
-              <History className="h-5 w-5 mr-2" />
-              History
-            </Link>
-            <Link
-              to="/sessions"
-              className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                isActive('/sessions')
-                  ? 'border-peekdiet-primary text-gray-900'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              }`}
-            >
-              <Activity className="h-5 w-5 mr-2" />
-              Sessions
-            </Link>
-            <Link
-              to="/track"
-              className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                isActive('/track')
-                  ? 'border-peekdiet-primary text-gray-900'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              }`}
-            >
-              <LineChart className="h-5 w-5 mr-2" />
-              Track Glucose
-            </Link>
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
+
+          {/* Desktop navigation */}
+          <div className="hidden md:flex md:space-x-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive(link.path)
+                    ? 'border-peekdiet-primary text-gray-900'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                <link.icon className="h-5 w-5 mr-2" />
+                {link.label}
+              </Link>
+            ))}
           </div>
           
           <div className="flex items-center">
@@ -104,6 +96,31 @@ const Navigation = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  isActive(link.path)
+                    ? 'bg-peekdiet-primary text-white'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="flex items-center">
+                  <link.icon className="h-5 w-5 mr-2" />
+                  {link.label}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

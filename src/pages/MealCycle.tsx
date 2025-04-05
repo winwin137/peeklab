@@ -4,8 +4,8 @@ import { useMealCycles } from '../hooks/useMealCycles';
 import { MealCycle as MealCycleType } from '../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { format } from 'date-fns';
 import { Activity, Clock, AlertCircle } from 'lucide-react';
+import { convertFirebaseTime } from '../utils/date';
 
 const MealCycle: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -69,7 +69,9 @@ const MealCycle: React.FC = () => {
             Meal Cycle Details
           </CardTitle>
           <CardDescription>
-            Started on {format(mealCycle.startTime, 'PPP p')}
+            {mealCycle.preprandialReading 
+              ? `Preprandial reading taken at ${convertFirebaseTime(mealCycle.preprandialReading.timestamp)}`
+              : 'No preprandial reading'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,7 +98,7 @@ const MealCycle: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-500">Time</p>
                     <p className="font-medium">
-                      {format(mealCycle.preprandialReading.timestamp, 'p')}
+                      {convertFirebaseTime(mealCycle.preprandialReading.timestamp)}
                     </p>
                   </div>
                 </div>
@@ -118,7 +120,7 @@ const MealCycle: React.FC = () => {
                         <div>
                           <p className="text-sm text-gray-500">Time</p>
                           <p className="font-medium">
-                            {format(reading.timestamp, 'p')}
+                            {convertFirebaseTime(reading.timestamp)}
                           </p>
                         </div>
                       </div>
