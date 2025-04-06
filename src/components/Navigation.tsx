@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { History, Activity, LineChart, LayoutDashboard, LogOut, Settings, User, Menu, X } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { History, Activity, LineChart, LayoutDashboard, LogOut, Settings, User, Menu, X, Scale, UserCog, Weight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { useState } from 'react';
 
 const Navigation = () => {
@@ -19,7 +19,10 @@ const Navigation = () => {
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/history', icon: History, label: 'History' },
     { path: '/sessions', icon: Activity, label: 'Sessions' },
-    { path: '/track', icon: LineChart, label: 'Track Glucose' }
+    { path: '/track', icon: LineChart, label: 'Track Glucose' },
+    { path: '/body-fat', icon: Scale, label: 'Body Fat Calculator' },
+    { path: '/weight', icon: Weight, label: 'Weight Tracker' },
+    { path: '/baseline', icon: UserCog, label: 'Baseline Profile' }
   ];
 
   return (

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { getCurrentTimeout } from '@/config';
 
 interface GlucoseInputProps {
   title: string;
@@ -21,6 +22,28 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
 }) => {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(getCurrentTimeout() * 60); // Convert minutes to seconds
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 0) {
+          clearInterval(timer);
+          onCancel();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [onCancel]);
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +83,9 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
             {error && (
               <p className="text-destructive text-sm mt-2">{error}</p>
             )}
+            <div className="mt-4 text-sm text-muted-foreground">
+              Time remaining: {formatTime(timeLeft)}
+            </div>
           </div>
         </form>
       </CardContent>

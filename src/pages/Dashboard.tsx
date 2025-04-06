@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useMealCycles } from '@/hooks/useMealCycles';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useAuth } from '@/contexts/AuthContext';
-import Footer from '@/components/layout/Footer';
-import StartMealCycle from '@/components/meal/StartMealCycle';
-import GlucoseInput from '@/components/glucose/GlucoseInput';
-import FirstBiteButton from '@/components/meal/FirstBiteButton';
-import MealCycleTimer from '@/components/meal/MealCycleTimer';
-import MealCycleList from '@/components/meal/MealCycleList';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { useMealCycles } from '../hooks/useMealCycles';
+import { useNotifications } from '../hooks/useNotifications';
+import { useAuth } from '../contexts/AuthContext';
+import Footer from '../components/layout/Footer';
+import StartMealCycle from '../components/meal/StartMealCycle';
+import GlucoseInput from '../components/glucose/GlucoseInput';
+import FirstBiteButton from '../components/meal/FirstBiteButton';
+import MealCycleTimer from '../components/meal/MealCycleTimer';
+import MealCycleList from '../components/meal/MealCycleList';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { Button } from '../components/ui/button';
 import { AlertTriangle, CloudOff, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAdHocReadings } from '@/hooks/useAdHocReadings';
-import { toast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { useAdHocReadings } from '../hooks/useAdHocReadings';
+import { toast } from '../components/ui/use-toast';
 
 type InputMode = 'idle' | 'preprandial' | 'postprandial' | 'adhoc';
 
@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
     isStartingMealCycle
   } = useMealCycles();
   
-  const { notifications } = useNotifications(activeMealCycle);
+  const { showNotification, getNotificationStatus } = useNotifications(activeMealCycle);
   const { createAdHocReading } = useAdHocReadings();
   
   const [inputMode, setInputMode] = useState<InputMode>('idle');

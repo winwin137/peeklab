@@ -7,9 +7,12 @@
  * ⚠️ DO NOT MODIFY IN PRODUCTION ⚠️
  */
 
+// Set this to false to use normal timeouts even in development
+const USE_TESTING_TIMEOUTS = false;
+
 export const TESTING_CONFIG = {
   // Set to true to enable testing mode
-  isTesting: process.env.NODE_ENV === 'development',
+  isTesting: process.env.NODE_ENV === 'development' && USE_TESTING_TIMEOUTS,
   
   // Timeout settings (in minutes)
   timeout: {
@@ -59,5 +62,7 @@ export const getCurrentTimeout = () => {
 
 // Helper function to get current cycle timeout
 export const getCurrentCycleTimeout = () => {
-  return TESTING_CONFIG.cycleTimeout.original;
+  return TESTING_CONFIG.isTesting 
+    ? TESTING_CONFIG.cycleTimeout.testing 
+    : TESTING_CONFIG.cycleTimeout.original;
 }; 

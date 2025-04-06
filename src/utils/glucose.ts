@@ -1,4 +1,4 @@
-import { MealCycle } from '@/types';
+import { MealCycle } from '../types';
 
 export const calculateAverageGlucose = (mealCycle: MealCycle): number | null => {
   // Get all readings (preprandial and postprandial)

@@ -84,10 +84,10 @@ const isSafari = () => {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 };
 
-export const requestNotificationPermission = async (): Promise<boolean> => {
+export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
   if (!isNotificationSupported()) {
     console.log('Notifications not supported in this browser');
-    return false;
+    return 'denied';
   }
 
   // Check if we're on iOS Safari
@@ -98,17 +98,16 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
       title: 'Enable Notifications',
       description: 'To receive alerts, please enable notifications in your Safari settings. Go to Settings > Safari > Notifications and allow notifications for this website.',
       duration: 10000,
-      variant: 'default',
     });
-    return false;
+    return 'denied';
   }
 
   try {
     const permission = await Notification.requestPermission();
-    return permission === 'granted';
+    return permission;
   } catch (error) {
     console.error('Error requesting notification permission:', error);
-    return false;
+    return 'denied';
   }
 };
 

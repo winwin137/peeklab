@@ -6,7 +6,7 @@ import { MealCycle } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { XCircle, Clock, AlertCircle, Timer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { getCurrentIntervals, getCurrentCycleTimeout } from '@/config';
+import { getCurrentIntervals, getCurrentCycleTimeout, getCurrentTimeout } from '@/config';
 import GlucoseGraph from './GlucoseGraph';
 import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
 import { convertFirebaseTime } from '@/utils/date';
@@ -23,7 +23,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   onAbandon
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number} | null>(null);
+  const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number, clockTime: string} | null>(null);
   const { getNotificationStatus, alertState } = useNotifications(mealCycle);
   
   // Get current intervals based on environment
@@ -46,25 +46,31 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     };
     
     const findNextReading = () => {
-      // Get all intervals that haven't been completed yet
-      const pendingIntervals = intervals.filter(
-        interval => !mealCycle.postprandialReadings[interval]
-      ).sort((a, b) => a - b);
+      if (!mealCycle?.postprandialReadings) return null;
       
-      if (pendingIntervals.length === 0) return null;
+      const now = Date.now();
+      const elapsedMinutes = (now - mealCycle.startTime) / (1000 * 60);
       
-      // Find the first interval that isn't due yet and isn't overdue
-      for (const minutesMark of pendingIntervals) {
-        const status = getNotificationStatus(minutesMark);
-        if (!status.due && !status.overdue) {
-          return {
-            minutesMark,
-            timeRemaining: status.timeUntil || 0
-          };
-        }
+      // Find the next reading that hasn't been taken yet
+      const nextReading = getCurrentIntervals().readings.find(interval => {
+        // If we've already taken this reading, skip it
+        if (mealCycle.postprandialReadings[interval]) return false;
+        // If we're past this interval's timeout, skip it
+        if (elapsedMinutes > interval + getCurrentTimeout()) return false;
+        // This is the next reading we need
+        return true;
+      });
+      
+      if (nextReading) {
+        const timeRemaining = Math.max(0, nextReading - elapsedMinutes);
+        const nextReadingTime = new Date(mealCycle.startTime + nextReading * 60 * 1000);
+        return {
+          minutesMark: nextReading,
+          timeRemaining: timeRemaining * 60 * 1000,
+          clockTime: nextReadingTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
       }
       
-      // If all pending intervals are due or overdue, return null
       return null;
     };
     
@@ -82,11 +88,22 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  const formatCountdown = (milliseconds: number) => {
-    const totalSeconds = Math.ceil(milliseconds / 1000);
+  const formatTimeRemaining = (milliseconds: number) => {
+    const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const formatTimeElapsed = () => {
+    if (!mealCycle?.startTime) return '00:00';
+    
+    const now = Date.now();
+    const elapsed = now - mealCycle.startTime;
+    const totalMinutes = Math.floor(elapsed / (60 * 1000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
   
   const formatStartTime = () => {
@@ -104,28 +121,65 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   };
   
   const calculateCountdownProgress = () => {
-    if (!nextReading || nextReading.timeRemaining <= 0) return 100;
+    if (!nextReading || !mealCycle?.startTime) return 0;
     
-    const minutesMark = nextReading.minutesMark;
-    const totalDuration = minutesMark * 60 * 1000 - (minutesMark > intervals[0] ? (minutesMark - intervals[0]) * 60 * 1000 : 0);
-    const progress = ((totalDuration - nextReading.timeRemaining) / totalDuration) * 100;
+    const now = Date.now();
+    const elapsedMinutes = (now - mealCycle.startTime) / (1000 * 60);
+    
+    // Find the last scheduled reading (whether taken or not)
+    const lastScheduledReading = getCurrentIntervals().readings
+      .filter(interval => interval < nextReading.minutesMark)
+      .sort((a, b) => b - a)[0] || 0;
+    
+    // Calculate total duration between last scheduled reading and next reading
+    const totalDuration = nextReading.minutesMark - lastScheduledReading;
+    // Calculate elapsed time since last scheduled reading
+    const elapsedSinceLast = Math.max(0, elapsedMinutes - lastScheduledReading);
+    
+    const progress = (elapsedSinceLast / totalDuration) * 100;
     return Math.min(progress, 100);
+  };
+  
+  const getReadingStatus = (minutesMark: number) => {
+    if (!mealCycle?.startTime) return { due: false, overdue: false };
+    
+    const now = Date.now();
+    const elapsedMinutes = (now - mealCycle.startTime) / (1000 * 60);
+    const timeoutMinutes = getCurrentCycleTimeout();
+    
+    const isDue = elapsedMinutes >= minutesMark && elapsedMinutes < minutesMark + timeoutMinutes;
+    const isOverdue = elapsedMinutes >= minutesMark + timeoutMinutes;
+    
+    return {
+      due: isDue,
+      overdue: isOverdue
+    };
   };
   
   const needsReading = (minutesMark: number) => {
     if (!mealCycle?.postprandialReadings) return false;
     if (mealCycle.postprandialReadings[minutesMark]) return false;
     
-    const status = getNotificationStatus(minutesMark);
-    return status.due && !status.overdue;
+    const status = getReadingStatus(minutesMark);
+    // Only return true if the reading is due AND not overdue AND not missed
+    return status?.due && !status?.overdue && !isMissed(minutesMark);
   };
   
   const isMissed = (minutesMark: number) => {
     if (!mealCycle?.postprandialReadings) return false;
     if (mealCycle.postprandialReadings[minutesMark]) return false;
     
-    const status = getNotificationStatus(minutesMark);
-    return status.overdue;
+    const status = getReadingStatus(minutesMark);
+    const isOverdue = status?.overdue;
+    
+    // A reading is missed if:
+    // 1. It's overdue (past its timeout period)
+    // 2. The current time is past its reading window
+    const now = Date.now();
+    const elapsedMinutes = (now - mealCycle.startTime) / (1000 * 60);
+    const isPastReadingWindow = elapsedMinutes > minutesMark + getCurrentTimeout();
+    
+    return isOverdue || isPastReadingWindow;
   };
   
   const isCompleted = (minutesMark: number) => {
@@ -228,7 +282,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
           <div className="w-full space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0:00</span>
-              <span>{Math.floor(maxTime / 60)}:00</span>
+              <span>3:00</span>
             </div>
             <div className="w-full bg-muted rounded-full h-2.5">
               <div 
@@ -240,19 +294,26 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
 
           {nextReading && (
             <div className="mt-4 bg-accent/30 p-4 rounded-lg border border-accent">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Timer className="h-5 w-5 text-accent-foreground" />
-                  <span className="text-base font-medium">
-                    {nextReading.timeRemaining > 0 
-                      ? `Next reading in ${formatCountdown(nextReading.timeRemaining)}`
-                      : `${nextReading.minutesMark}-minute reading due now!`
-                    }
-                  </span>
+                  <Timer className="h-5 w-5 text-muted-foreground" />
+                  {nextReading && (
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Next reading at {nextReading.clockTime}
+                    </span>
+                  )}
                 </div>
-                <span className="text-sm font-medium text-accent-foreground">
-                  {nextReading.minutesMark} min
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                <span>
+                  {getCurrentIntervals().readings
+                    .filter(interval => interval < nextReading.minutesMark)
+                    .sort((a, b) => b - a)[0] || 0}:00
                 </span>
+                <span>{nextReading.minutesMark}:00</span>
               </div>
               <Progress value={calculateCountdownProgress()} className="h-2" />
             </div>

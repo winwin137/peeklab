@@ -6,13 +6,13 @@ import { getAnalytics, isSupported } from 'firebase/analytics';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBXo8aHR1FdhUeJDiH-eIseAue5SAgcTfI",
-  authDomain: "newpeekwind.firebaseapp.com",
-  projectId: "newpeekwind",
-  storageBucket: "newpeekwind.appspot.com",
-  messagingSenderId: "403242235671",
-  appId: "1:403242235671:web:f204cbb8ab9c605dd12952",
-  measurementId: "G-NLP2TN948M"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 let app;

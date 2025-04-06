@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { GlucoseReading } from '@/types';
-import { db } from '@/lib/firebase';
+import { GlucoseReading } from '../types';
+import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, addDoc, where, Timestamp } from 'firebase/firestore';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useAdHocReadings = () => {
   const { user } = useAuth();

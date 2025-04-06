@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GlucoseReading } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { GlucoseReading } from '../../types';
 
 interface AdHocReadingCardProps {
   reading: GlucoseReading;

@@ -39,11 +39,11 @@ import {
   getDoc,
   setDoc
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
-import { MealCycle, GlucoseReading } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import { getCurrentTimeout } from '@/config';
+import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { MealCycle, GlucoseReading } from '../types';
+import { useToast } from '../hooks/use-toast';
+import { getCurrentTimeout } from '../config';
 
 interface PendingAction {
   type: 'start' | 'firstBite' | 'reading' | 'abandon';

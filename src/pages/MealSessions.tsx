@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { format, startOfDay, endOfDay } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MealCycle, GlucoseReading } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { MealCycle, GlucoseReading } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useMealCycles } from '@/hooks/useMealCycles';
-import { useAdHocReadings } from '@/hooks/useAdHocReadings';
-import AdHocReadingCard from '@/components/history/AdHocReadingCard';
-import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
+import { useMealCycles } from '../hooks/useMealCycles';
+import { useAdHocReadings } from '../hooks/useAdHocReadings';
+import AdHocReadingCard from '../components/history/AdHocReadingCard';
+import { calculateAverageGlucose, calculatePeakGlucose } from '../utils/glucose';
 
 const MealSessions: React.FC = () => {
   const { mealCycles, loading: mealCyclesLoading } = useMealCycles();
