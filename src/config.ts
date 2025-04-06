@@ -8,7 +8,7 @@
  */
 
 // Set this to false to use normal timeouts even in development
-const USE_TESTING_TIMEOUTS = false;
+const USE_TESTING_TIMEOUTS = true;
 
 export const TESTING_CONFIG = {
   // Set to true to enable testing mode
@@ -41,7 +41,7 @@ export const TESTING_CONFIG = {
     // Testing intervals (can be modified)
     testing: {
       firstBite: 0,
-      readings: [20, 40, 60, 90, 120, 180]
+      readings: [5, 10, 15, 20, 25, 30]
     }
   }
 };

@@ -11,6 +11,7 @@ interface GlucoseInputProps {
   onSubmit: (value: number) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  minutesMark?: number; // Optional - only provided for postprandial readings
 }
 
 const GlucoseInput: React.FC<GlucoseInputProps> = ({
@@ -18,13 +19,39 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
   description,
   onSubmit,
   onCancel,
-  isLoading = false
+  isLoading = false,
+  minutesMark
 }) => {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number>(getCurrentTimeout() * 60); // Convert minutes to seconds
+  const isPostprandial = minutesMark !== undefined;
+  const timeoutMinutes = isPostprandial ? getCurrentTimeout() : 0; // No timeout for preprandial
+  const [timeLeft, setTimeLeft] = useState<number>(timeoutMinutes * 60);
+  const [isEnabled, setIsEnabled] = useState(!isPostprandial); // Always enabled for preprandial
 
   useEffect(() => {
+    if (!isPostprandial) return; // No timeout for preprandial
+
+    // Calculate when to enable the input form
+    const enableTime = minutesMark - timeoutMinutes;
+    const now = Date.now();
+    const startTime = now - (now % (60 * 1000)); // Round down to nearest minute
+    
+    if (startTime >= enableTime * 60 * 1000) {
+      setIsEnabled(true);
+    } else {
+      setIsEnabled(false);
+      const timeUntilEnable = (enableTime * 60 * 1000) - startTime;
+      const timer = setTimeout(() => {
+        setIsEnabled(true);
+      }, timeUntilEnable);
+      return () => clearTimeout(timer);
+    }
+  }, [minutesMark, timeoutMinutes, isPostprandial]);
+
+  useEffect(() => {
+    if (!isPostprandial) return; // No timeout for preprandial
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 0) {
@@ -37,7 +64,7 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [onCancel]);
+  }, [onCancel, isPostprandial]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -78,14 +105,27 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
               onChange={(e) => setValue(e.target.value)}
               placeholder="Enter glucose value"
               className="text-center text-2xl h-16 w-32"
-              disabled={isLoading}
+              disabled={isLoading || (isPostprandial && !isEnabled)}
             />
             {error && (
               <p className="text-destructive text-sm mt-2">{error}</p>
             )}
-            <div className="mt-4 text-sm text-muted-foreground">
-              Time remaining: {formatTime(timeLeft)}
-            </div>
+            {isPostprandial && (
+              <div className="mt-4 flex flex-col items-center">
+                <div className="text-sm font-medium text-muted-foreground">Input Form Timeout</div>
+                <div className="text-2xl font-bold mt-1">
+                  {formatTime(timeLeft)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {timeoutMinutes === 2 ? '2-minute timeout (Testing)' : '7-minute timeout (Normal)'}
+                </div>
+                {!isEnabled && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Input form will be enabled {timeoutMinutes} minutes before reading time
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </form>
       </CardContent>
@@ -93,7 +133,7 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
         <Button
           onClick={handleSubmit}
           className="w-full"
-          disabled={isLoading}
+          disabled={isLoading || (isPostprandial && !isEnabled)}
         >
           {isLoading ? (
             <>

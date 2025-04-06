@@ -20,6 +20,7 @@ interface AuthContextType {
   signInWithGithub: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   createTestAccount: () => Promise<void>;
+  signInWithTestAccount: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -91,6 +92,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithTestAccount = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, 'winwin137@icloud.com', 'Asdf1234!');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error signing in with test account:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -109,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithGithub,
     signInWithGoogle,
     createTestAccount,
+    signInWithTestAccount,
     logout
   };
 

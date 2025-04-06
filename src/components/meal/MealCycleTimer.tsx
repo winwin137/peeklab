@@ -33,6 +33,18 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   useEffect(() => {
     if (!mealCycle?.startTime) return;
     
+    // Check if the last reading has been taken
+    const lastReading = getCurrentIntervals().readings[getCurrentIntervals().readings.length - 1];
+    const lastReadingTaken = mealCycle.postprandialReadings?.[lastReading];
+    
+    // If cycle is completed, abandoned, or the last reading is taken, set the final elapsed time and stop the timer
+    if (mealCycle.status === 'completed' || mealCycle.status === 'abandoned' || lastReadingTaken) {
+      const finalElapsed = Date.now() - mealCycle.startTime;
+      setElapsedTime(finalElapsed);
+      setNextReading(null);
+      return;
+    }
+    
     console.log('MealCycleTimer: Setting up timer with startTime', mealCycle.startTime);
     
     const updateElapsedTime = () => {
@@ -156,15 +168,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     };
   };
   
-  const needsReading = (minutesMark: number) => {
-    if (!mealCycle?.postprandialReadings) return false;
-    if (mealCycle.postprandialReadings[minutesMark]) return false;
-    
-    const status = getReadingStatus(minutesMark);
-    // Only return true if the reading is due AND not overdue AND not missed
-    return status?.due && !status?.overdue && !isMissed(minutesMark);
-  };
-  
   const isMissed = (minutesMark: number) => {
     if (!mealCycle?.postprandialReadings) return false;
     if (mealCycle.postprandialReadings[minutesMark]) return false;
@@ -182,6 +185,23 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     return isOverdue || isPastReadingWindow;
   };
   
+  const needsReading = (minutesMark: number) => {
+    if (!mealCycle?.postprandialReadings) return false;
+    if (mealCycle.postprandialReadings[minutesMark]) return false;
+    
+    const status = getReadingStatus(minutesMark);
+    const isDue = status?.due;
+    const isOverdue = status?.overdue;
+    const isMissedReading = isMissed(minutesMark);
+    
+    // Enable button 2 minutes before the scheduled reading time
+    const now = Date.now();
+    const elapsedMinutes = (now - mealCycle.startTime) / (1000 * 60);
+    const isEarlyInput = elapsedMinutes >= minutesMark - 2 && elapsedMinutes < minutesMark;
+    
+    return (isDue && !isOverdue && !isMissedReading) || isEarlyInput;
+  };
+  
   const isCompleted = (minutesMark: number) => {
     if (!mealCycle?.postprandialReadings) return false;
     return !!mealCycle.postprandialReadings[minutesMark];
@@ -189,14 +209,26 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   
   const handleTakeReading = (minutesMark: number) => {
     onTakeReading(minutesMark);
+    
+    // Check if this is the last reading
+    const lastReading = getCurrentIntervals().readings[getCurrentIntervals().readings.length - 1];
+    if (minutesMark === lastReading) {
+      // Mark the cycle as completed
+      if (mealCycle && mealCycle.status === 'active') {
+        console.log('Marking cycle as completed after last reading');
+        mealCycle.status = 'completed';
+        // Force a re-render by updating the elapsed time
+        setElapsedTime(Date.now() - mealCycle.startTime);
+        setNextReading(null);
+      }
+    }
   };
   
   const handleAbandon = () => {
-    if (!mealCycle || mealCycle.status === 'abandoned') {
-      return; // Prevent double abandonment
+    if (mealCycle && mealCycle.status === 'active') {
+      mealCycle.status = 'abandoned';
+      onAbandon();
     }
-    console.log('MealCycleTimer: Abandoning meal cycle');
-    onAbandon();
   };
 
   // Add a check to prevent rendering if cycle is past the configured timeout
@@ -284,12 +316,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
               <span>0:00</span>
               <span>3:00</span>
             </div>
-            <div className="w-full bg-muted rounded-full h-2.5">
-              <div 
-                className="bg-peekdiet-primary h-2.5 rounded-full" 
-                style={{ width: `${calculateProgress()}%` }}
-              />
-            </div>
+            <Progress value={calculateProgress()} className="h-2" />
           </div>
 
           {nextReading && (
@@ -305,6 +332,9 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {formatTimeRemaining(nextReading.timeRemaining)}
+                  </span>
                 </div>
               </div>
               <div className="flex justify-between text-xs text-muted-foreground mb-2">
@@ -388,16 +418,16 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
             </div>
           </div>
         </CardContent>
-        <CardFooter>
-          {mealCycle.status !== 'abandoned' && (
-            <Button 
-              variant="outline" 
-              className="w-full text-destructive hover:bg-destructive/10" 
-              onClick={handleAbandon}
-            >
-              Abandon Meal Cycle
-            </Button>
-          )}
+        <CardFooter className="flex flex-col space-y-4">
+          {/* Abandon Button */}
+          <Button
+            variant="destructive"
+            onClick={handleAbandon}
+            className="w-full"
+          >
+            <XCircle className="mr-2 h-4 w-4" />
+            Abandon Meal Cycle
+          </Button>
         </CardFooter>
       </Card>
     </>

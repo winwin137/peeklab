@@ -114,53 +114,53 @@ const HistoryView: React.FC<HistoryViewProps> = ({ mealCycles, adHocReadings }) 
                     return (
                       <Card key={cycle.id}>
                         <CardHeader>
-                          <CardTitle className="text-lg">
+                    <CardTitle className="text-lg">
                             {convertFirebaseTime(cycle.startTime)}
-                          </CardTitle>
-                          <CardDescription>
+                    </CardTitle>
+                    <CardDescription>
                             ID: {cycle.uniqueId}
                             {averageGlucose !== null && (
                               <span className="ml-2 font-semibold">
                                 Average: {averageGlucose} mg/dL
-                              </span>
-                            )}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          {(cycle.status === 'completed' || 
-                            cycle.status === 'abandoned' ||
-                            Object.keys(cycle.postprandialReadings).length > 0) && (
-                            <div className="h-32 w-full mt-2">
+                        </span>
+                      )}
+                    </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(cycle.status === 'completed' || 
+                  cycle.status === 'abandoned' ||
+                  Object.keys(cycle.postprandialReadings).length > 0) && (
+                  <div className="h-32 w-full mt-2">
                               <GlucoseGraph mealCycle={cycle} />
-                            </div>
-                          )}
-                          
-                          <div className="grid grid-cols-4 gap-1 text-xs mt-3">
-                            <div className="text-muted-foreground text-right">Pre:</div>
-                            <div className="font-semibold">
-                              {cycle.preprandialReading 
-                                ? `${cycle.preprandialReading.value} mg/dL` 
-                                : '—'}
-                            </div>
-                            
-                            <div className="text-muted-foreground text-right">Peak:</div>
-                            <div className="font-semibold">
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-4 gap-1 text-xs mt-3">
+                  <div className="text-muted-foreground text-right">Pre:</div>
+                  <div className="font-semibold">
+                    {cycle.preprandialReading 
+                      ? `${cycle.preprandialReading.value} mg/dL` 
+                      : '—'}
+                  </div>
+                  
+                  <div className="text-muted-foreground text-right">Peak:</div>
+                  <div className="font-semibold">
                               {peakGlucose ? `${peakGlucose} mg/dL` : '—'}
-                            </div>
-                            
-                            <div className="text-muted-foreground text-right">Readings:</div>
-                            <div className="font-semibold">
-                              {Object.keys(cycle.postprandialReadings).length + 
-                                (cycle.preprandialReading ? 1 : 0)}
-                            </div>
-                            
-                            <div className="text-muted-foreground text-right">Status:</div>
-                            <div className="font-semibold capitalize">
-                              {cycle.status}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                  </div>
+                  
+                  <div className="text-muted-foreground text-right">Readings:</div>
+                  <div className="font-semibold">
+                    {Object.keys(cycle.postprandialReadings).length + 
+                      (cycle.preprandialReading ? 1 : 0)}
+                  </div>
+                  
+                  <div className="text-muted-foreground text-right">Status:</div>
+                  <div className="font-semibold capitalize">
+                    {cycle.status}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
                     );
                   })}
                   
