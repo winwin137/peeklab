@@ -4,8 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predeploy": "./scripts/set-version.sh",
+    "deploy": "vite build",
     "dev": "vite",
-    "build": "vite build",
+    "build": "./scripts/set-version.sh && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -1,4 +1,31 @@
-/**
+export const useNotifications = (
+  mealCycle: MealCycle | null, 
+  mode: 'original' | 'testing' = 'testing'
+) => {
+  // Use mode in interval calculations
+  const intervals = getCurrentIntervals(mode).readings;
+
+  // Rest of the existing implementation
+};const MealCycleTimer: React.FC<MealCycleTimerProps> = ({ 
+  mealCycle, 
+  onTakeReading, 
+  onAbandon,
+  mode = 'testing'  // Explicitly default to testing
+}) => {
+  // Use mode in all interval and timeout calculations
+  const intervals = getCurrentIntervals(mode).readings;
+  const maxTime = intervals[intervals.length - 1];
+  const cycleTimeout = getCurrentCycleTimeout(mode);
+
+  // Rest of the existing implementation
+};export const useMealCycles = (mode: 'original' | 'testing' = 'testing') => {
+  // Existing logic, but use mode for interval and timeout calculations
+  const intervals = getCurrentIntervals(mode);
+  const timeout = getCurrentTimeout(mode);
+  const cycleTimeout = getCurrentCycleTimeout(mode);
+
+  // Rest of the existing implementation
+};/**
  * Testing Configuration
  * 
  * This file contains configurable values for testing purposes.
@@ -8,9 +35,6 @@
  */
 
 export const TESTING_CONFIG = {
-  // Set to true to enable testing mode
-  isTesting: process.env.NODE_ENV === 'development',
-  
   // Timeout settings (in minutes)
   timeout: {
     // Original timeout (7 minutes after scheduled time)
@@ -38,26 +62,28 @@ export const TESTING_CONFIG = {
     // Testing intervals (can be modified)
     testing: {
       firstBite: 0,
-      readings: [20, 40, 60, 90, 120, 180]
+      readings: [5, 10, 15, 20, 25, 30]
     }
   }
 };
 
 // Helper function to get current intervals
-export const getCurrentIntervals = () => {
-  return TESTING_CONFIG.isTesting 
+export const getCurrentIntervals = (mode: 'original' | 'testing' = 'testing') => {
+  return mode === 'testing' 
     ? TESTING_CONFIG.intervals.testing 
     : TESTING_CONFIG.intervals.original;
 };
 
 // Helper function to get current timeout
-export const getCurrentTimeout = () => {
-  return TESTING_CONFIG.isTesting 
+export const getCurrentTimeout = (mode: 'original' | 'testing' = 'testing') => {
+  return mode === 'testing' 
     ? TESTING_CONFIG.timeout.testing 
     : TESTING_CONFIG.timeout.original;
 };
 
 // Helper function to get current cycle timeout
-export const getCurrentCycleTimeout = () => {
-  return TESTING_CONFIG.cycleTimeout.original;
-}; 
+export const getCurrentCycleTimeout = (mode: 'original' | 'testing' = 'testing') => {
+  return mode === 'testing' 
+    ? TESTING_CONFIG.cycleTimeout.testing 
+    : TESTING_CONFIG.cycleTimeout.original;
+};

@@ -15,19 +15,21 @@ interface MealCycleTimerProps {
   mealCycle: MealCycle | null;
   onTakeReading: (minutesMark: number) => void;
   onAbandon: () => void;
+  mode: string; // Add mode prop
 }
 
 const MealCycleTimer: React.FC<MealCycleTimerProps> = ({ 
   mealCycle,
   onTakeReading,
-  onAbandon
+  onAbandon,
+  mode // Add mode prop
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number} | null>(null);
-  const { getNotificationStatus, alertState } = useNotifications(mealCycle);
+  const { getNotificationStatus, alertState } = useNotifications(mealCycle, mode); // Update useNotifications
   
   // Get current intervals based on environment
-  const intervals = getCurrentIntervals().readings;
+  const intervals = getCurrentIntervals(mode).readings; // Update intervals
   const maxTime = intervals[intervals.length - 1];
   
   useEffect(() => {
@@ -73,7 +75,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     const interval = setInterval(updateElapsedTime, 1000);
     
     return () => clearInterval(interval);
-  }, [mealCycle?.startTime, mealCycle?.postprandialReadings, mealCycle?.status, getNotificationStatus, intervals]);
+  }, [mealCycle?.startTime, mealCycle?.postprandialReadings, mealCycle?.status, getNotificationStatus, intervals, mode]);
   
   const formatElapsedTime = () => {
     const totalSeconds = Math.floor(elapsedTime / 1000);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { MealCycle } from '@/types';
-import { getCurrentTimeout } from '@/config';
+import { getCurrentTimeout, getCurrentIntervals } from '@/config';
 import { 
   playNotificationSound, 
   requestNotificationPermission,
@@ -11,7 +11,7 @@ import { NotificationAlert } from '@/components/notifications/NotificationAlert'
 
 const NOTIFICATION_INTERVALS = [20, 40, 60, 90, 120, 180]; // minutes
 
-export const useNotifications = (mealCycle: MealCycle | null) => {
+export const useNotifications = (mealCycle: MealCycle | null, mode: string) => {
   const { toast } = useToast();
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -89,7 +89,8 @@ export const useNotifications = (mealCycle: MealCycle | null) => {
     if (!mealCycle?.startTime) return;
 
     const checkReadings = () => {
-      const intervals = [20, 40, 60, 90, 120, 180];
+      // Use getCurrentIntervals to dynamically get the correct intervals
+      const intervals = getCurrentIntervals(mode).readings;
       
       for (const minutesMark of intervals) {
         // Skip if reading is already completed
@@ -109,7 +110,7 @@ export const useNotifications = (mealCycle: MealCycle | null) => {
 
     const interval = setInterval(checkReadings, 1000);
     return () => clearInterval(interval);
-  }, [mealCycle, getNotificationStatus, lastNotified]);
+  }, [mealCycle, getNotificationStatus, lastNotified, mode]);
 
   return {
     showNotification,

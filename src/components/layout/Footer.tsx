@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CloudOff, Clock } from 'lucide-react';
 import { useMealCycles } from '@/hooks/useMealCycles';
 import { getCurrentCycleTimeout } from '@/config';
 
-// This version number should be updated whenever significant changes are made
-const APP_VERSION = '1.6.0';
+// Hardcoded version that will be replaced during build process
+const APP_VERSION = process.env.REACT_APP_VERSION || 'dev';
 
 const Footer: React.FC = () => {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
@@ -62,7 +62,7 @@ const Footer: React.FC = () => {
     <footer className="border-t py-4 mt-auto">
       <div className="container flex justify-between items-center text-xs text-muted-foreground">
         <div>
-          <span>© 2025 PeekDiet</span>
+          <span> 2025 PeekDiet</span>
         </div>
         <div className="flex items-center gap-4">
           {timeRemaining !== null && (
@@ -77,7 +77,7 @@ const Footer: React.FC = () => {
               <span>Offline</span>
             </div>
           )}
-          <span>Version {APP_VERSION}</span>
+          <span>v{APP_VERSION}</span>
         </div>
       </div>
     </footer>
