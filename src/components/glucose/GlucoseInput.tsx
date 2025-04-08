@@ -1,19 +1,40 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useMealCycles } from '@/hooks/useMealCycles';
+import { getCurrentIntervals, getCurrentCycleTimeout } from '@/config';
+import { MealCycle } from '@/types';
 
 interface GlucoseInputProps {
   timePoint: number;
   onSubmit: (value: number) => void;
+  onAbandonCycle?: () => void;
+  activeMealCycle?: MealCycle | null;
+  mode?: 'original' | 'testing';
 }
 
-const GlucoseInput: React.FC<GlucoseInputProps> = ({ timePoint, onSubmit }) => {
+const GlucoseInput: React.FC<GlucoseInputProps> = ({ 
+  timePoint, 
+  onSubmit, 
+  onAbandonCycle, 
+  activeMealCycle = null, 
+  mode = 'testing' 
+}) => {
   const [value, setValue] = useState<number>(120);
   const { toast } = useToast();
-  
+  const { abandonMealCycle } = useMealCycles();
+
+  const isLastReadingCompleted = () => {
+    const intervals = getCurrentIntervals(mode).readings;
+    const lastInterval = intervals[intervals.length - 1];
+    
+    return Object.keys(activeMealCycle?.postprandialReadings || {})
+      .some(mark => parseInt(mark) === lastInterval);
+  };
+
   const handleChange = (val: number[]) => {
     setValue(val[0]);
   };
@@ -51,11 +72,27 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({ timePoint, onSubmit }) => {
   };
   
   const handleSaveReading = () => {
-    // Ensure logging is explicit and visible
-    console.warn('🩺 GLUCOSE_READING:', {
+    // Extensive logging for debugging
+    const expectedTime = activeMealCycle 
+      ? activeMealCycle.startTime + (timePoint * 60 * 1000) 
+      : 0;
+    const nowMillis = Date.now();
+    const isEarly = nowMillis < (expectedTime - (getCurrentCycleTimeout(mode) * 60 * 1000));
+    const isLate = nowMillis > (expectedTime + (getCurrentCycleTimeout(mode) * 60 * 1000));
+
+    console.error('🩺 SAVE READING DEBUG', {
       value,
-      timestamp: new Date().toISOString(),
-      timePoint: `${timePoint} minutes`
+      timePoint,
+      activeMealCycle: !!activeMealCycle,
+      postprandialReadings: activeMealCycle?.postprandialReadings,
+      expectedIntervals: getCurrentIntervals(mode).readings,
+      cycleStatus: activeMealCycle?.status,
+      onSubmitType: typeof onSubmit,
+      onAbandonCycleType: typeof onAbandonCycle,
+      isEarly,
+      isLate,
+      expectedTime,
+      nowMillis
     });
 
     // Validate and submit the reading
@@ -67,8 +104,103 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({ timePoint, onSubmit }) => {
       });
       return;
     }
-  
-    onSubmit(value);
+
+    // Diagnostic check for onSubmit
+    if (!onSubmit) {
+      console.error('❌ CRITICAL: onSubmit is not defined!', {
+        onSubmitFunction: onSubmit,
+        componentProps: { value, timePoint, mode }
+      });
+      toast({
+        title: "Submission Error",
+        description: "Unable to save reading. Please contact support.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check for cycle abandonment
+    if (activeMealCycle) {
+      const intervals = getCurrentIntervals(mode).readings;
+      const lastInterval = intervals[intervals.length - 1];
+      const elapsed = Date.now() - activeMealCycle.startTime;
+      const minutesElapsed = elapsed / (60 * 1000);
+      const cycleTimeout = getCurrentCycleTimeout(mode);
+
+      // Comprehensive abandonment verification
+      const debugAbandonmentInfo = {
+        currentTimePoint: timePoint,
+        lastInterval,
+        intervals,
+        postprandialReadings: activeMealCycle.postprandialReadings || {},
+        isLastIntervalReading: timePoint === lastInterval,
+        hasAllReadings: intervals.every(interval => 
+          activeMealCycle.postprandialReadings && 
+          activeMealCycle.postprandialReadings[interval] !== undefined
+        ),
+        minutesElapsed,
+        cycleTimeout
+      };
+
+      console.error('🚨 EARLY ABANDONMENT VERIFICATION:', JSON.stringify(debugAbandonmentInfo, null, 2));
+
+      // Detailed breakdown of readings
+      console.error('🔍 READING DETAILS:', 
+        intervals.map(interval => ({
+          interval,
+          hasReading: !!activeMealCycle.postprandialReadings?.[interval],
+          reading: activeMealCycle.postprandialReadings?.[interval]
+        }))
+      );
+
+      // Trigger abandonment conditions
+      const shouldAbandon = 
+        timePoint === lastInterval ||  // Current reading is the last interval
+        intervals.every(interval => 
+          activeMealCycle.postprandialReadings && 
+          activeMealCycle.postprandialReadings[interval] !== undefined
+        );
+
+      if (shouldAbandon) {
+        console.warn('🏁 Early Abandonment Triggered:', {
+          reason: timePoint === lastInterval 
+            ? 'Last interval reading' 
+            : 'All readings completed'
+        });
+        
+        // Optional: Add a toast for user feedback
+        toast({
+          title: "Meal Cycle Completed",
+          description: "Your glucose tracking for this meal is now complete.",
+          variant: "default"
+        });
+
+        // Signal abandonment
+        onAbandonCycle?.();
+        return;
+      }
+    }
+
+    // Modify onSubmit to ensure correct reading storage
+    const submitReading = () => {
+      console.error('📝 READING SUBMISSION ATTEMPT', {
+        timePoint,
+        value,
+        expectedIntervals: getCurrentIntervals(mode).readings,
+        onSubmitFunction: !!onSubmit
+      });
+
+      const result = onSubmit(value);
+      
+      console.error('📝 READING SUBMISSION RESULT', {
+        timePoint,
+        value,
+        submissionResult: result
+      });
+    };
+
+    submitReading();
+    
     toast({
       title: "Reading Recorded",
       description: `${value} mg/dL at ${timePoint} minutes recorded successfully`,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMealCycles } from '@/hooks/useMealCycles';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,7 @@ import { AlertTriangle, CloudOff, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAdHocReadings } from '@/hooks/useAdHocReadings';
 import { toast } from '@/components/ui/use-toast';
+import { getCurrentIntervals } from '@/utils/cycleConfig';
 
 type InputMode = 'idle' | 'preprandial' | 'postprandial' | 'adhoc';
 
@@ -67,6 +68,36 @@ const Dashboard: React.FC = () => {
     return () => {
       console.error('Dashboard unmounted at:', new Date().toISOString());
     };
+  }, [activeMealCycle, pendingMealCycle]);
+  
+  useEffect(() => {
+    const cycleToUse = activeMealCycle || pendingMealCycle;
+    
+    if (cycleToUse) {
+      try {
+        const intervals = getCurrentIntervals('testing').readings;
+        const postprandialReadings = cycleToUse.postprandialReadings || {};
+        const shouldAbandon = intervals.every(interval => 
+          postprandialReadings[interval] !== undefined
+        );
+
+        console.error('🚨 ABANDONMENT DEBUG', {
+          activeMealCycle: !!cycleToUse,
+          onAbandonCycle: typeof setShowAbandonConfirm,
+          shouldAbandon,
+          postprandialReadings: Object.keys(postprandialReadings),
+          expectedIntervals: intervals,
+          cycleStatus: cycleToUse.status,
+          readingsDetails: intervals.map(interval => ({
+            interval,
+            hasReading: postprandialReadings[interval] !== undefined,
+            reading: postprandialReadings[interval]
+          }))
+        });
+      } catch (error) {
+        console.error('Error in abandonment debug:', error);
+      }
+    }
   }, [activeMealCycle, pendingMealCycle]);
   
   const handleStartMeal = () => {
@@ -157,6 +188,7 @@ const Dashboard: React.FC = () => {
           onSubmit={handlePreprandialSubmit}
           onCancel={() => setInputMode('idle')}
           isLoading={isStartingMealCycle}
+          onAbandonCycle={() => setShowAbandonConfirm(true)}
         />
       );
     }
@@ -168,6 +200,7 @@ const Dashboard: React.FC = () => {
           description={`Enter your blood glucose ${currentMinutesMark} minutes after first bite`}
           onSubmit={handlePostprandialSubmit}
           onCancel={() => setInputMode('idle')}
+          onAbandonCycle={() => setShowAbandonConfirm(true)}
         />
       );
     }
@@ -179,6 +212,7 @@ const Dashboard: React.FC = () => {
           description="Enter your current blood glucose"
           onSubmit={handleAdhocSubmit}
           onCancel={() => setInputMode('idle')}
+          onAbandonCycle={() => setShowAbandonConfirm(true)}
         />
       );
     }
@@ -203,6 +237,7 @@ const Dashboard: React.FC = () => {
               mealCycle={cycleToUse}
               onTakeReading={handleTakeReading}
               onAbandon={() => setShowAbandonConfirm(true)}
+              onAbandonConfirm={() => setShowAbandonConfirm(true)} // Add onAbandon prop
             />
           </div>
         );
