@@ -50,6 +50,31 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({ timePoint, onSubmit }) => {
     });
   };
   
+  const handleSaveReading = () => {
+    // Ensure logging is explicit and visible
+    console.warn('🩺 GLUCOSE_READING:', {
+      value,
+      timestamp: new Date().toISOString(),
+      timePoint: `${timePoint} minutes`
+    });
+
+    // Validate and submit the reading
+    if (value < 50 || value > 300) {
+      toast({
+        title: "Invalid Value",
+        description: "Please enter a glucose value between 50 and 300 mg/dL",
+        variant: "destructive"
+      });
+      return;
+    }
+  
+    onSubmit(value);
+    toast({
+      title: "Reading Recorded",
+      description: `${value} mg/dL at ${timePoint} minutes recorded successfully`,
+    });
+  };
+  
   // Get color based on value
   const getValueColor = () => {
     if (value < 65) return 'text-blue-600';
@@ -134,7 +159,7 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({ timePoint, onSubmit }) => {
       {/* Save button centered */}
       <div className="flex justify-center">
         <Button 
-          onClick={handleSubmit} 
+          onClick={handleSaveReading} 
           size="lg"
           className="mx-auto"
         >
