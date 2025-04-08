@@ -69,17 +69,17 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({ timePoint, onSubmit }) => {
       <div className="text-center mb-4">
         <div className="text-[2rem] text-center text-gray-600">
           {value < 65 ? (
-            <span className="text-blue-600">Extreme Weight Loss Range</span>
+            <span className="text-blue-600">Extreme Weight Loss</span>
           ) : value <= 90 ? (
             <span className="text-green-600">Weight Loss Range</span>
           ) : value <= 110 ? (
-            <span className="text-yellow-600">Maintain Weight!</span>
+            <span className="text-yellow-600">Maintain Weight</span>
           ) : value <= 140 ? (
             <span className="text-orange-600">Weight Gain Range</span>
           ) : value <= 180 ? (
-            <span className="text-red-600">Extreme Weight Gain Range</span>
+            <span className="text-red-600">Extreme Weight Gain</span>
           ) : (
-            <span className="text-purple-600">Extreme Fat Storage</span>
+            <span className="text-purple-600">Extreme Weight Gain</span>
           )}
         </div>
       </div>
