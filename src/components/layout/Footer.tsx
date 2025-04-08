@@ -4,7 +4,7 @@ import { useMealCycles } from '@/hooks/useMealCycles';
 import { getCurrentCycleTimeout } from '@/config';
 
 // Hardcoded version that will be replaced during build process
-const APP_VERSION = process.env.REACT_APP_VERSION || 'dev';
+const APP_VERSION = import.meta.env?.VITE_APP_VERSION || 'dev';
 
 const Footer: React.FC = () => {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);

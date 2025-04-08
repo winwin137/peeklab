@@ -1,93 +1,147 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { useToast } from '@/hooks/use-toast';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface GlucoseInputProps {
-  title: string;
-  description: string;
+  timePoint: number;
   onSubmit: (value: number) => void;
-  onCancel: () => void;
-  isLoading?: boolean;
 }
 
-const GlucoseInput: React.FC<GlucoseInputProps> = ({
-  title,
-  description,
-  onSubmit,
-  onCancel,
-  isLoading = false
-}) => {
-  const [value, setValue] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const numericValue = parseFloat(value);
-    
-    if (isNaN(numericValue)) {
-      setError('Please enter a valid number');
-      return;
-    }
-    
-    if (numericValue < 0 || numericValue > 500) {
-      setError('Please enter a value between 0 and 500');
-      return;
-    }
-    
-    setError(null);
-    onSubmit(numericValue);
+const GlucoseInput: React.FC<GlucoseInputProps> = ({ timePoint, onSubmit }) => {
+  const [value, setValue] = useState<number>(120);
+  const { toast } = useToast();
+  
+  const handleChange = (val: number[]) => {
+    setValue(val[0]);
   };
-
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseInt(e.target.value);
+    if (!isNaN(newValue) && newValue >= 50 && newValue <= 300) {
+      setValue(newValue);
+    }
+  };
+  
+  const handleIncrease = () => {
+    setValue(Math.min(300, value + 1));
+  };
+  
+  const handleDecrease = () => {
+    setValue(Math.max(50, value - 1));
+  };
+  
+  const handleSubmit = () => {
+    if (value < 50 || value > 300) {
+      toast({
+        title: "Invalid Value",
+        description: "Please enter a glucose value between 50 and 300 mg/dL",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    onSubmit(value);
+    toast({
+      title: "Reading Recorded",
+      description: `${value} mg/dL at ${timePoint} minutes recorded successfully`,
+    });
+  };
+  
+  // Get color based on value
+  const getValueColor = () => {
+    if (value < 65) return 'text-blue-600';
+    if (value <= 90) return 'text-green-600';
+    if (value <= 105) return 'text-yellow-600';
+    if (value <= 140) return 'text-orange-600';
+    if (value <= 180) return 'text-red-600';
+    return 'text-purple-600';
+  };
+  
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-center">{title}</CardTitle>
-        <CardDescription className="text-center">{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-col items-center">
-            <Input
-              type="number"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="Enter glucose value"
-              className="text-center text-2xl h-16 w-32"
-              disabled={isLoading}
-            />
-            {error && (
-              <p className="text-destructive text-sm mt-2">{error}</p>
-            )}
-          </div>
-        </form>
-      </CardContent>
-      <CardFooter className="flex flex-col space-y-2">
-        <Button
-          onClick={handleSubmit}
-          className="w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
-            </>
+    <div className="p-4 bg-white rounded-lg shadow-sm">
+      {/* Title */}
+      <h3 className="text-center text-[3rem] font-bold mb-6 text-gray-800">Glucose Reading</h3>
+      
+      {/* Glucose Level Description */}
+      <div className="text-center mb-4">
+        <div className="text-[2rem] text-center text-gray-600">
+          {value < 65 ? (
+            <span className="text-blue-600">Extreme Weight Loss Range</span>
+          ) : value <= 90 ? (
+            <span className="text-green-600">Weight Loss Range</span>
+          ) : value <= 110 ? (
+            <span className="text-yellow-600">Maintain Weight!</span>
+          ) : value <= 140 ? (
+            <span className="text-orange-600">Weight Gain Range</span>
+          ) : value <= 180 ? (
+            <span className="text-red-600">Extreme Weight Gain Range</span>
           ) : (
-            'Submit'
+            <span className="text-purple-600">Extreme Fat Storage</span>
           )}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={onCancel}
-          className="w-full"
-          disabled={isLoading}
+        </div>
+      </div>
+      
+      {/* Glucose Value Display */}
+      <div className="text-center mb-4">
+        <span className={`text-4xl font-bold ${getValueColor()}`}>
+          {value} mg/dL
+        </span>
+      </div>
+      
+      {/* Slider and controls */}
+      <div className="flex items-center gap-4 mb-4">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={handleDecrease}
+          className="h-10 w-10 rounded-full"
         >
-          Cancel
+          <span className="text-[2.5rem]">-</span>
         </Button>
-      </CardFooter>
-    </Card>
+        
+        <div className="flex-1">
+          <Slider 
+            value={[value]} 
+            min={50} 
+            max={300} 
+            step={1}
+            onValueChange={handleChange}
+            className="flex-1"
+            trackColor={
+              value < 65 ? 'bg-blue-500' :
+              value <= 90 ? 'bg-green-500' :
+              value <= 110 ? 'bg-yellow-500' :
+              value <= 140 ? 'bg-orange-500' :
+              value <= 180 ? 'bg-red-500' :
+              'bg-purple-500'
+            }
+          />
+        </div>
+        
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={handleIncrease}
+          className="h-10 w-10 rounded-full"
+        >
+          <span className="text-[2.5rem]">+</span>
+        </Button>
+      </div>
+      
+      {/* Save button centered */}
+      <div className="flex justify-center">
+        <Button 
+          onClick={handleSubmit} 
+          size="lg"
+          className="mx-auto"
+        >
+          Save Reading
+        </Button>
+      </div>
+    </div>
   );
 };
 

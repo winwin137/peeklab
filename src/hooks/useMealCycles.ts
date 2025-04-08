@@ -474,27 +474,31 @@ export const useMealCycles = () => {
         return null;
       }
       
-      const newReading: GlucoseReading = {
-        id: `${activeMealCycle.id}_${minutesMark}`,
+      const reading: Omit<GlucoseReading, 'id'> = {
         userId: user.uid,
         value,
-        timestamp: nowMillis,
+        timestamp: now,
         type: 'postprandial',
         minutesMark,
-        createdAt: nowMillis,
-        updatedAt: nowMillis
+        createdAt: now,
+        updatedAt: now
       };
-      
+
+      console.log(`📊 Glucose Reading Submitted:
+  - Time Mark: ${minutesMark} minutes
+  - Value: ${value} mg/dL
+  - Readings Count: ${Object.keys(activeMealCycle.postprandialReadings).length + 1}/6`);
+
       const updatedReadings = {
         ...activeMealCycle.postprandialReadings,
-        [minutesMark]: newReading
+        [minutesMark]: reading
       };
       
       const isComplete = minutesMark === 180;
       const updatedStatus = isComplete ? 'completed' : 'active';
       
       await updateDoc(doc(db, 'mealCycles', activeMealCycle.id), {
-        [`postprandialReadings.${minutesMark}`]: newReading,
+        [`postprandialReadings.${minutesMark}`]: reading,
         status: updatedStatus,
         updatedAt: now
       });
