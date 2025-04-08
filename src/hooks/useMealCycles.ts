@@ -43,7 +43,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { MealCycle, GlucoseReading } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getCurrentTimeout } from '@/config';
+import { getCurrentTimeout, getCurrentIntervals } from '@/config';
 
 interface PendingAction {
   type: 'start' | 'firstBite' | 'reading' | 'abandon';
@@ -548,8 +548,8 @@ export const useMealCycles = () => {
     try {
       console.log('Updating meal cycle status:', activeMealCycle.id);
       
-      // Check if already in final state
-      if (['abandoned', 'completed', 'canceled'].includes(activeMealCycle.status)) {
+      // Prevent changing status if already in a final state
+      if (['completed', 'canceled'].includes(activeMealCycle.status)) {
         toast({
           title: "Cannot change meal cycle status",
           description: `This meal cycle is already ${activeMealCycle.status}.`,
@@ -558,21 +558,25 @@ export const useMealCycles = () => {
         return false;
       }
       
-      // Handle pending meal cycle
-      if (pendingMealCycle) {
-        console.log('Removing pending meal cycle from state');
-        setPendingMealCycle(null);
-        setActiveMealCycle(null);
-        
-        toast({
-          title: "Meal Cycle Status Updated",
-          description: "Your pending meal cycle has been removed.",
-        });
-        
-        return true;
+      const lastInterval = getCurrentIntervals('testing').readings[5]; // 30 minutes
+      const isLastReading = activeMealCycle.postprandialReadings && 
+        activeMealCycle.postprandialReadings[lastInterval] !== undefined;
+
+      if (isLastReading) {
+        options = { status: 'completed' };
       }
       
-      // Determine status
+      // Automatically set to completed if all readings are present
+      const intervals = getCurrentIntervals('testing').readings;
+      const allReadingsSubmitted = intervals.every(interval => 
+        activeMealCycle.postprandialReadings && 
+        activeMealCycle.postprandialReadings[interval] !== undefined
+      );
+      
+      if (allReadingsSubmitted) {
+        options = { status: 'completed' };
+      }
+      
       const cycleStatus = options?.status || 
         (options?.userInitiated ? 'canceled' : 'abandoned');
       

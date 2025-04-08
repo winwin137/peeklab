@@ -291,12 +291,16 @@ const Dashboard: React.FC = () => {
           <DialogTitle className="text-center">
             {activeMealCycle?.status === 'abandoned' 
               ? 'Session Abandoned' 
-              : 'Cancel Meal Cycle?'}
+              : (activeMealCycle?.status === 'completed' 
+                ? 'Meal Cycle Completed' 
+                : 'Cancel Meal Cycle?')}
           </DialogTitle>
           <DialogDescription className="text-center">
             {activeMealCycle?.status === 'abandoned'
               ? 'Please press Continue.'
-              : "This will mark your current meal cycle as canceled. You cannot undo this action."}
+              : (activeMealCycle?.status === 'completed'
+                ? 'Your meal cycle tracking is complete.'
+                : "This will mark your current meal cycle as canceled. You cannot undo this action.")}
           </DialogDescription>
           
           <div className="p-6 text-center space-y-4">
@@ -311,6 +315,17 @@ const Dashboard: React.FC = () => {
                 <Button 
                   variant="default" 
                   onClick={() => setShowAbandonConfirm(false)}
+                >
+                  Continue
+                </Button>
+              </div>
+            ) : (activeMealCycle?.status === 'completed' ? (
+              <div className="flex justify-center mt-4">
+                <Button 
+                  variant="default" 
+                  onClick={() => {
+                    setShowAbandonConfirm(false);
+                  }}
                 >
                   Continue
                 </Button>
@@ -333,7 +348,7 @@ const Dashboard: React.FC = () => {
                   Yes
                 </Button>
               </div>
-            )}
+            ))}
           </div>
         </DialogContent>
       </Dialog>

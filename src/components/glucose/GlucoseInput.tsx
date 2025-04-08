@@ -12,6 +12,7 @@ interface GlucoseInputProps {
   timePoint: number;
   onSubmit: (value: number) => void;
   onAbandonCycle?: () => void;
+  onCompleteCycle?: () => void;
   activeMealCycle?: MealCycle | null;
   mode?: 'original' | 'testing';
 }
@@ -20,6 +21,7 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
   timePoint, 
   onSubmit, 
   onAbandonCycle, 
+  onCompleteCycle, 
   activeMealCycle = null, 
   mode = 'testing' 
 }) => {
@@ -119,7 +121,7 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
       return;
     }
 
-    // Check for cycle abandonment
+    // Check for cycle completion
     if (activeMealCycle) {
       const intervals = getCurrentIntervals(mode).readings;
       const lastInterval = intervals[intervals.length - 1];
@@ -127,8 +129,8 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
       const minutesElapsed = elapsed / (60 * 1000);
       const cycleTimeout = getCurrentCycleTimeout(mode);
 
-      // Comprehensive abandonment verification
-      const debugAbandonmentInfo = {
+      // Comprehensive completion verification
+      const debugCompletionInfo = {
         currentTimePoint: timePoint,
         lastInterval,
         intervals,
@@ -142,7 +144,7 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
         cycleTimeout
       };
 
-      console.error('🚨 EARLY ABANDONMENT VERIFICATION:', JSON.stringify(debugAbandonmentInfo, null, 2));
+      console.error('🚨 COMPLETION VERIFICATION:', JSON.stringify(debugCompletionInfo, null, 2));
 
       // Detailed breakdown of readings
       console.error('🔍 READING DETAILS:', 
@@ -153,17 +155,16 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
         }))
       );
 
-      // Trigger abandonment conditions
-      const shouldAbandon = 
-        timePoint === lastInterval ||  // Current reading is the last interval
-        intervals.every(interval => 
-          activeMealCycle.postprandialReadings && 
-          activeMealCycle.postprandialReadings[interval] !== undefined
-        );
+      // Trigger completion conditions
+      const isLastReading = timePoint === lastInterval;
+      const allReadingsCompleted = intervals.every(interval => 
+        activeMealCycle.postprandialReadings && 
+        activeMealCycle.postprandialReadings[interval] !== undefined
+      );
 
-      if (shouldAbandon) {
-        console.warn('🏁 Early Abandonment Triggered:', {
-          reason: timePoint === lastInterval 
+      if (isLastReading || allReadingsCompleted) {
+        console.warn('🏁 Meal Cycle Completion Triggered:', {
+          reason: isLastReading 
             ? 'Last interval reading' 
             : 'All readings completed'
         });
@@ -175,8 +176,8 @@ const GlucoseInput: React.FC<GlucoseInputProps> = ({
           variant: "default"
         });
 
-        // Signal abandonment
-        onAbandonCycle?.();
+        // Signal completion instead of abandonment
+        onCompleteCycle?.();
         return;
       }
     }

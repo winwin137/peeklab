@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { History, Activity, LineChart, LayoutDashboard, LogOut, Settings, User, Menu, X } from 'lucide-react';
+import { History, Activity, LineChart, LayoutDashboard, LogOut, Settings, User, Menu, X, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,15 +19,17 @@ const Navigation = () => {
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/history', icon: History, label: 'History' },
     { path: '/sessions', icon: Activity, label: 'Sessions' },
-    { path: '/track', icon: LineChart, label: 'Track Glucose' }
+    { path: '/track', icon: LineChart, label: 'Track Glucose' },
+    { path: '/about', icon: Info, label: 'About' },
+    { path: '/profile', icon: User, label: 'Profile' }
   ];
 
   return (
     <nav className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Mobile menu button */}
-          <div className="flex items-center md:hidden">
+          {/* Hamburger menu - ALWAYS VISIBLE */}
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -37,9 +39,9 @@ const Navigation = () => {
               {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
-
-          {/* Desktop navigation */}
-          <div className="hidden md:flex md:space-x-8">
+          
+          {/* Desktop navigation - HIDDEN BY DEFAULT */}
+          <div className="hidden">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -97,9 +99,9 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu - ALWAYS VISIBLE WHEN OPEN */}
       {isMobileMenuOpen && (
-        <div className="md:hidden">
+        <div className="block">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navLinks.map((link) => (
               <Link
