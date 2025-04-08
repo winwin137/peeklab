@@ -17,7 +17,7 @@ export type MealCycle = {
   startTime: number; // Timestamp when the cycle started (First Bite)
   preprandialReading?: GlucoseReading;
   postprandialReadings: Record<number, GlucoseReading>; // Key is minutes (20, 40, etc.)
-  status: 'active' | 'completed' | 'abandoned';
+  status: 'active' | 'completed' | 'abandoned' | 'canceled';
   archived?: boolean; // Flag to indicate if the meal cycle is archived
   notes?: string;
   createdAt: number;

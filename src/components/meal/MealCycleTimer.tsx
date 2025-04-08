@@ -14,7 +14,11 @@ import { convertFirebaseTime } from '@/utils/date';
 interface MealCycleTimerProps {
   mealCycle: MealCycle | null;
   onTakeReading: (minutesMark: number) => void;
-  onAbandon: () => void;
+  onAbandon: (options?: {
+    status?: 'completed' | 'abandoned' | 'canceled';
+    modalTitle?: string;
+    confirmButtonText?: string;
+  }) => void;
   mode: string; // Add mode prop
 }
 
@@ -558,7 +562,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
                 className="w-full text-destructive hover:bg-destructive/10" 
                 onClick={handleAbandon}
               >
-                Abandon Meal Cycle
+                Cancel Meal Cycle
               </Button>
             )}
           </CardFooter>

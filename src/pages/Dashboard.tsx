@@ -152,12 +152,19 @@ const Dashboard: React.FC = () => {
   };
   
   const handleAbandonConfirm = async () => {
-    const success = await abandonMealCycle();
+    const success = await abandonMealCycle({ status: 'canceled' });
     if (success) {
       setShowAbandonConfirm(false);
     }
   };
 
+  const handleCompleteMealCycle = async () => {
+    const success = await abandonMealCycle({ status: 'completed' });
+    if (success) {
+      setShowAbandonConfirm(false);
+    }
+  };
+  
   const renderOfflineWarning = () => {
     if (!isOffline) return null;
     
@@ -237,7 +244,8 @@ const Dashboard: React.FC = () => {
               mealCycle={cycleToUse}
               onTakeReading={handleTakeReading}
               onAbandon={() => setShowAbandonConfirm(true)}
-              onAbandonConfirm={() => setShowAbandonConfirm(true)} // Add onAbandon prop
+              onComplete={handleCompleteMealCycle} // Add onComplete prop
+              onAbandonConfirm={() => setShowAbandonConfirm(true)} 
             />
           </div>
         );
@@ -280,11 +288,15 @@ const Dashboard: React.FC = () => {
       
       <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
         <DialogContent>
-          <DialogTitle className="text-center">Abandon Meal Cycle?</DialogTitle>
+          <DialogTitle className="text-center">
+            {activeMealCycle?.status === 'abandoned' 
+              ? 'Session Abandoned' 
+              : 'Cancel Meal Cycle?'}
+          </DialogTitle>
           <DialogDescription className="text-center">
-            This will {activeMealCycle?.postprandialReadings && Object.keys(activeMealCycle.postprandialReadings).length === 0 
-              ? "completely remove your current meal cycle" 
-              : "mark your current meal cycle as abandoned"}. You cannot undo this action.
+            {activeMealCycle?.status === 'abandoned'
+              ? 'Please press Continue.'
+              : "This will mark your current meal cycle as canceled. You cannot undo this action."}
           </DialogDescription>
           
           <div className="p-6 text-center space-y-4">
@@ -294,14 +306,34 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex space-x-2 justify-center mt-4">
-              <Button variant="outline" onClick={() => setShowAbandonConfirm(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleAbandonConfirm}>
-                Abandon
-              </Button>
-            </div>
+            {activeMealCycle?.status === 'abandoned' ? (
+              <div className="flex justify-center mt-4">
+                <Button 
+                  variant="default" 
+                  onClick={() => setShowAbandonConfirm(false)}
+                >
+                  Continue
+                </Button>
+              </div>
+            ) : (
+              <div className="flex space-x-2 justify-center mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAbandonConfirm(false)}
+                >
+                  No
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    handleAbandonConfirm();
+                    setShowAbandonConfirm(false);
+                  }}
+                >
+                  Yes
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
