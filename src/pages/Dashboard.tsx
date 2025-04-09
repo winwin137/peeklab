@@ -174,7 +174,7 @@ const Dashboard: React.FC = () => {
       case 'canceled':
         return 'Meal Cycle Canceled';
       default:
-        return 'Cancel Meal Cycle?';
+        return 'Unexpected';
     }
   };
 
@@ -187,7 +187,7 @@ const Dashboard: React.FC = () => {
       case 'canceled':
         return 'This will mark your current meal cycle as canceled. You cannot undo this action.';
       default:
-        return 'Confirm canceling this meal cycle.';
+        return 'oops';
     }
   };
 
@@ -233,7 +233,7 @@ const Dashboard: React.FC = () => {
               variant="outline" 
               onClick={() => setShowAbandonConfirm(false)}
             >
-              No
+              ?
             </Button>
             <Button 
               variant="destructive" 
@@ -242,7 +242,7 @@ const Dashboard: React.FC = () => {
                 setShowAbandonConfirm(false);
               }}
             >
-              Yes
+              ??
             </Button>
           </div>
         );
