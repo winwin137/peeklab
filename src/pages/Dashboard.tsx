@@ -165,6 +165,90 @@ const Dashboard: React.FC = () => {
     }
   };
   
+  const getDialogTitle = (status?: string) => {
+    switch (status) {
+      case 'abandoned':
+        return 'Session Abandoned';
+      case 'completed':
+        return 'Meal Cycle Completed';
+      case 'canceled':
+        return 'Meal Cycle Canceled';
+      default:
+        return 'Cancel Meal Cycle?';
+    }
+  };
+
+  const getMessage = (status?: string) => {
+    switch (status) {
+      case 'abandoned':
+        return 'Please press Continue.';
+      case 'completed':
+        return 'Your meal cycle tracking is complete.';
+      case 'canceled':
+        return 'This will mark your current meal cycle as canceled. You cannot undo this action.';
+      default:
+        return 'Confirm canceling this meal cycle.';
+    }
+  };
+
+  const renderModalButtons = (status?: string) => {
+    switch (status) {
+      case 'abandoned':
+        return (
+          <div className="flex justify-center mt-4">
+            <Button 
+              variant="default" 
+              onClick={() => setShowAbandonConfirm(false)}
+            >
+              Continue
+            </Button>
+          </div>
+        );
+      case 'completed':
+        return (
+          <div className="flex justify-center mt-4">
+            <Button 
+              variant="default" 
+              onClick={() => setShowAbandonConfirm(false)}
+            >
+              OK
+            </Button>
+          </div>
+        );
+      case 'canceled':
+        return (
+          <div className="flex justify-center mt-4">
+            <Button 
+              variant="default" 
+              onClick={() => setShowAbandonConfirm(false)}
+            >
+              Dismiss
+            </Button>
+          </div>
+        );
+      default:
+        return (
+          <div className="flex space-x-2 justify-center mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAbandonConfirm(false)}
+            >
+              No
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                handleAbandonConfirm();
+                setShowAbandonConfirm(false);
+              }}
+            >
+              Yes
+            </Button>
+          </div>
+        );
+    }
+  };
+
   const renderOfflineWarning = () => {
     if (!isOffline) return null;
     
@@ -289,18 +373,10 @@ const Dashboard: React.FC = () => {
       <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
         <DialogContent>
           <DialogTitle className="text-center">
-            {activeMealCycle?.status === 'abandoned' 
-              ? 'Session Abandoned' 
-              : (activeMealCycle?.status === 'completed' 
-                ? 'Meal Cycle Completed' 
-                : 'Cancel Meal Cycle?')}
+            {getDialogTitle(activeMealCycle?.status)}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {activeMealCycle?.status === 'abandoned'
-              ? 'Please press Continue.'
-              : (activeMealCycle?.status === 'completed'
-                ? 'Your meal cycle tracking is complete.'
-                : "This will mark your current meal cycle as canceled. You cannot undo this action.")}
+            {getMessage(activeMealCycle?.status)}
           </DialogDescription>
           
           <div className="p-6 text-center space-y-4">
@@ -310,45 +386,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            {activeMealCycle?.status === 'abandoned' ? (
-              <div className="flex justify-center mt-4">
-                <Button 
-                  variant="default" 
-                  onClick={() => setShowAbandonConfirm(false)}
-                >
-                  Continue
-                </Button>
-              </div>
-            ) : (activeMealCycle?.status === 'completed' ? (
-              <div className="flex justify-center mt-4">
-                <Button 
-                  variant="default" 
-                  onClick={() => {
-                    setShowAbandonConfirm(false);
-                  }}
-                >
-                  Continue
-                </Button>
-              </div>
-            ) : (
-              <div className="flex space-x-2 justify-center mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowAbandonConfirm(false)}
-                >
-                  No
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={() => {
-                    handleAbandonConfirm();
-                    setShowAbandonConfirm(false);
-                  }}
-                >
-                  Yes
-                </Button>
-              </div>
-            ))}
+            {renderModalButtons(activeMealCycle?.status)}
           </div>
         </DialogContent>
       </Dialog>

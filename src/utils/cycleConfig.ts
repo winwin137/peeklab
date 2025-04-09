@@ -15,7 +15,7 @@ const INTERVALS: Record<string, IntervalConfig> = {
   },
   testing: {
     firstBite: 0,
-    readings: [5, 10, 15, 20, 25, 30]
+    readings: [3, 6, 9, 12, 15, 18]
   }
 };
 
@@ -26,7 +26,7 @@ const TIMEOUTS: TimeoutConfig = {
 
 const CYCLE_TIMEOUTS: TimeoutConfig = {
   original: 190,
-  testing: 40
+  testing: 21
 };
 
 export function getCurrentIntervals(mode: 'original' | 'testing' = 'testing'): IntervalConfig {

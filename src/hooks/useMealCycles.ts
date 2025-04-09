@@ -573,7 +573,7 @@ export const useMealCycles = () => {
         activeMealCycle.postprandialReadings[interval] !== undefined
       );
       
-      if (allReadingsSubmitted) {
+      if (isLastReading) {
         options = { status: 'completed' };
       }
       

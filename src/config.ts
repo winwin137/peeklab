@@ -48,7 +48,7 @@ export const TESTING_CONFIG = {
     // Original cycle timeout (190 minutes from first bite)
     original: 190,
     // Testing cycle timeout (40 minutes from first bite)
-    testing: 40
+    testing: 21
   },
   
   // Reading intervals (in minutes)
@@ -62,7 +62,7 @@ export const TESTING_CONFIG = {
     // Testing intervals (can be modified)
     testing: {
       firstBite: 0,
-      readings: [5, 10, 15, 20, 25, 30]
+      readings: [3, 6, 9, 12, 15, 18]
     }
   }
 };
