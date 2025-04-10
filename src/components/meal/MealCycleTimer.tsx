@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -10,6 +10,7 @@ import { getCurrentIntervals, getCurrentCycleTimeout } from '@/config';
 import GlucoseGraph from './GlucoseGraph';
 import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
 import { convertFirebaseTime } from '@/utils/date';
+import { format, addMinutes } from 'date-fns';
 
 interface MealCycleTimerProps {
   mealCycle: MealCycle | null;
@@ -19,20 +20,19 @@ interface MealCycleTimerProps {
     modalTitle?: string;
     confirmButtonText?: string;
   }) => void;
-  mode: string; // Add mode prop
+  mode: string; 
 }
 
 const MealCycleTimer: React.FC<MealCycleTimerProps> = ({ 
   mealCycle,
   onTakeReading,
   onAbandon,
-  mode = 'original' // Changed from 'testing' to 'original'
+  mode = 'original'
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number} | null>(null);
   const { getNotificationStatus, alertState } = useNotifications(mealCycle, mode);
   
-  // Get current intervals based on environment
   const intervals = getCurrentIntervals(mode).readings;
   const maxTime = intervals[intervals.length - 1];
   const cycleTimeout = getCurrentCycleTimeout(mode);
@@ -51,11 +51,9 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       const nextReadingData = findNextReading();
       setNextReading(nextReadingData);
 
-      // Check if the final (6th) reading is completed
       const finalReadingInterval = intervals[intervals.length - 1];
       const hasFinalReading = !!mealCycle.postprandialReadings[finalReadingInterval];
 
-      // Only complete the cycle if final reading exists
       if (hasFinalReading && mealCycle.status !== 'completed' && onAbandon) {
         console.log('Final reading completed. Automatically completing meal cycle.');
         onAbandon({ status: 'completed' });
@@ -63,14 +61,12 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     };
     
     const findNextReading = () => {
-      // Get all intervals that haven't been completed yet
       const pendingIntervals = intervals.filter(
         interval => !mealCycle.postprandialReadings[interval]
       ).sort((a, b) => a - b);
       
       if (pendingIntervals.length === 0) return null;
       
-      // Find the first interval that isn't due yet and isn't overdue
       for (const minutesMark of pendingIntervals) {
         const status = getNotificationStatus(minutesMark);
         if (!status.due && !status.overdue) {
@@ -81,7 +77,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
         }
       }
       
-      // If all pending intervals are due or overdue, return null
       return null;
     };
     
@@ -156,22 +151,20 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   
   const handleAbandon = () => {
     if (!mealCycle || mealCycle.status === 'abandoned') {
-      return; // Prevent double abandonment
+      return; 
     }
     console.log('MealCycleTimer: Abandoning meal cycle');
     onAbandon({ status: 'canceled' });
   };
 
-  // Add a check to prevent rendering if cycle is past the configured timeout
   if (mealCycle && mealCycle.startTime) {
     const elapsed = Date.now() - mealCycle.startTime;
     const minutesElapsed = elapsed / (60 * 1000);
     if (minutesElapsed >= cycleTimeout) {
-      // Force abandon the cycle if it's past the timeout
       if (mealCycle.status !== 'abandoned') {
         handleAbandon();
       }
-      return null; // Don't render anything if cycle is past the timeout
+      return null; 
     }
   }
 
@@ -242,17 +235,24 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
               </div>
             </div>
             
-            <div className="w-full space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>0:00</span>
-                <span>{Math.floor(maxTime / 60)}:00</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2.5">
-                <div 
-                  className="bg-peekdiet-primary h-2.5 rounded-full" 
-                  style={{ width: `${calculateProgress()}%` }}
-                />
-              </div>
+            <div className="w-full flex justify-between items-center text-xs text-muted-foreground mb-2">
+              {['FB', ...intervals].map((interval, index) => {
+                const time = index === 0 
+                  ? format(mealCycle.startTime, 'h:mma').replace('AM', 'a').replace('PM', 'p')
+                  : format(addMinutes(mealCycle.startTime, Number(interval)), 'h:mma').replace('AM', 'a').replace('PM', 'p');
+                return (
+                  <span key={interval} className="flex-1 text-center">
+                    {time}
+                  </span>
+                );
+              })}
+            </div>
+            
+            <div className="w-full bg-muted rounded-full h-2.5">
+              <div 
+                className="bg-peekdiet-primary h-2.5 rounded-full" 
+                style={{ width: `${calculateProgress()}%` }}
+              />
             </div>
 
             {nextReading && (
@@ -275,7 +275,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
               </div>
             )}
 
-            {/* Add Glucose Graph */}
             {(mealCycle.preprandialReading || Object.keys(mealCycle.postprandialReadings).length > 0) && (
               <div className="h-32 w-full mt-4">
                 <GlucoseGraph mealCycle={mealCycle} />
@@ -318,7 +317,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
               })}
             </div>
 
-            {/* Stats display */}
             <div className="grid grid-cols-4 gap-1 text-xs mt-3">
               <div className="text-muted-foreground text-right">Pre:</div>
               <div className="font-semibold">

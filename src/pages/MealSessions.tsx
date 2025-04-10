@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay, addMinutes } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MealCycle, GlucoseReading } from '@/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -9,6 +9,7 @@ import AdHocReadingCard from '@/components/history/AdHocReadingCard';
 import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getCurrentIntervals } from '@/utils/cycleConfig';
 
 const MealSessions: React.FC = () => {
   const { 
@@ -143,6 +144,9 @@ const MealSessions: React.FC = () => {
               const averageGlucose = calculateAverageGlucose(cycle);
               const peakGlucose = calculatePeakGlucose(cycle);
               
+              // Get the original intervals
+              const intervals = getCurrentIntervals('original').readings;
+              
               return (
                 <Card key={cycle.id} className="relative">
                   {/* Delete Button for Completed, Canceled, or Abandoned Cycles */}
@@ -175,6 +179,20 @@ const MealSessions: React.FC = () => {
                       cycle.status === 'abandoned' ||
                       Object.keys(cycle.postprandialReadings).length > 0) && (
                       <div className="h-32 w-full mt-2">
+                        {/* Scheduled Reading Times */}
+                        <div className="w-full flex justify-between items-center text-xs text-gray-500 mb-2">
+                          {['FB', ...intervals].map((interval, index) => {
+                            const time = index === 0 
+                              ? format(cycle.startTime, 'h:mma') 
+                              : format(addMinutes(cycle.startTime, Number(interval)), 'h:mma');
+                            return (
+                              <span key={interval} className="flex-1 text-center">
+                                {time}
+                              </span>
+                            );
+                          })}
+                        </div>
+
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart
                             data={[
@@ -258,4 +276,4 @@ const MealSessions: React.FC = () => {
   );
 };
 
-export default MealSessions; 
+export default MealSessions;
