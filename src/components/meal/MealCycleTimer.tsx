@@ -37,170 +37,6 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   const maxTime = intervals[intervals.length - 1];
   const cycleTimeout = getCurrentCycleTimeout(mode);
 
-  // Debug information rendering
-  const renderDebugInfo = () => {
-    if (!mealCycle) return null;
-
-    const postprandialReadings = mealCycle.postprandialReadings || {};
-
-    // Explicitly count completed readings
-    const completedReadings = intervals.filter(interval => 
-      postprandialReadings[interval] !== undefined
-    );
-
-    const upcomingIntervals = intervals.filter(interval => 
-      !postprandialReadings[interval] && interval > Math.max(...completedReadings)
-    );
-
-    const isLastReading = Object.keys(postprandialReadings).includes(Math.max(...intervals).toString());
-    const isLastReadingCompleted = isLastReading ? true : false;
-
-    // Detailed logging of completed intervals
-    console.error('🔍 DETAILED READING DEBUG', {
-      expectedIntervals: intervals,
-      completedReadings,
-      completedReadingsData: completedReadings.map(interval => ({
-        interval,
-        reading: postprandialReadings[interval]
-      })),
-      upcomingIntervals
-    });
-
-    return (
-      <div className="bg-yellow-100 p-2 mb-4 rounded-lg text-xs">
-        <h3 className="font-bold mb-2">🐞 Abandonment Debug</h3>
-        <div className="debug-row">
-          <span>isLastReading:</span>
-          <span className={isLastReading ? 'text-green-500' : 'text-red-500'}>
-            {isLastReading.toString()}
-          </span>
-        </div>
-        <div className="debug-row">
-          <span>isLastReadingCompleted:</span>
-          <span className={isLastReadingCompleted ? 'text-green-500' : 'text-red-500'}>
-            {isLastReadingCompleted.toString()}
-          </span>
-        </div>
-        <div className="debug-row">
-          <span>Last Reading:</span>
-          <span className={isLastReading ? 'text-green-500' : 'text-gray-500'}>
-            {isLastReading ? '✓' : `✗ (${completedReadings.length}/${intervals.length})`}
-          </span>
-        </div>
-        <div className="debug-row">
-          <span>Readings Completed:</span>
-          <span className={isLastReadingCompleted ? 'text-green-500' : 'text-gray-500'}>
-            {isLastReadingCompleted ? '✓' : `✗ (${completedReadings.length}/${intervals.length})`}
-          </span>
-        </div>
-        <div>Upcoming Intervals: {upcomingIntervals.join(', ')}</div>
-        <div>activeMealCycle: {JSON.stringify(!!mealCycle)}</div>
-        <div>onAbandon: {typeof onAbandon}</div>
-        <div>shouldAbandon: {JSON.stringify(isLastReadingCompleted)}</div>
-        <div>postprandialReadings: {JSON.stringify(Object.keys(postprandialReadings))}</div>
-        <div>expectedIntervals: {JSON.stringify(intervals)}</div>
-        <div>cycleStatus: {mealCycle.status}</div>
-      </div>
-    );
-  };
-
-  useEffect(() => {
-    if (mealCycle) {
-      const postprandialReadings = mealCycle.postprandialReadings || {};
-
-      // Convert postprandial readings to actual interval numbers
-      const completedReadings = intervals.filter(interval => 
-        postprandialReadings[interval] !== undefined
-      );
-
-      const upcomingIntervals = intervals.filter(interval => 
-        !postprandialReadings[interval] && interval > Math.max(...completedReadings)
-      );
-
-      const isLastReading = Object.keys(postprandialReadings).includes(Math.max(...intervals).toString());
-      const isLastReadingCompleted = isLastReading ? true : false;
-
-      // Debug logging to understand the state
-      console.error('🔍 LAST READING DEBUG', {
-        intervals,
-        completedReadings,
-        postprandialReadings: Object.keys(postprandialReadings),
-        isLastReading,
-        isLastReadingCompleted,
-        lastInterval: intervals[intervals.length - 1],
-        expectedIntervals: intervals
-      });
-
-      const debugData = {
-        activeMealCycle: !!mealCycle,
-        onAbandon: typeof onAbandon,
-        shouldAbandon: isLastReadingCompleted,
-        postprandialReadings: Object.keys(postprandialReadings),
-        expectedIntervals: intervals,
-        cycleStatus: mealCycle.status,
-        isLastReading,
-        isLastReadingCompleted
-      };
-
-      console.log(debugData);
-    }
-  }, [mealCycle, mode]);
-
-  useEffect(() => {
-    if (!mealCycle || !mealCycle.startTime) return;
-
-    const checkCycleCompletion = () => {
-      if (!mealCycle) return;
-
-      const elapsed = Date.now() - mealCycle.startTime;
-      const minutesElapsed = elapsed / (60 * 1000);
-
-      // Convert postprandial readings to actual interval numbers
-      const completedReadings = intervals.filter(interval => 
-        mealCycle.postprandialReadings && 
-        mealCycle.postprandialReadings[interval] !== undefined
-      );
-
-      const upcomingIntervals = intervals.filter(interval => 
-        !mealCycle.postprandialReadings[interval] && interval > Math.max(...completedReadings)
-      );
-
-      const isLastReading = Object.keys(mealCycle.postprandialReadings).includes(Math.max(...intervals).toString());
-      const isLastReadingCompleted = isLastReading ? true : false;
-
-      // Debug logging to understand the state
-      console.error('🔍 LAST READING DEBUG', {
-        intervals,
-        completedReadings,
-        postprandialReadings: Object.keys(mealCycle.postprandialReadings),
-        isLastReading,
-        isLastReadingCompleted,
-        lastInterval: intervals[intervals.length - 1],
-        expectedIntervals: intervals
-      });
-
-      console.warn('🏁 Cycle Completion Check:', {
-        intervals,
-        isLastReading,
-        isLastReadingCompleted,
-        minutesElapsed,
-        postprandialReadings: mealCycle.postprandialReadings
-      });
-
-      // Trigger abandonment if last reading is completed or timeout exceeded
-      if (isLastReadingCompleted || minutesElapsed >= cycleTimeout) {
-        console.warn('🏁 Cycle completed or timed out. Signaling abandonment.');
-        onAbandon();
-      }
-    };
-
-    // Check cycle completion immediately and set up interval
-    checkCycleCompletion();
-    const completionInterval = setInterval(checkCycleCompletion, 5000); // Check every 5 seconds
-
-    return () => clearInterval(completionInterval);
-  }, [mealCycle, intervals, cycleTimeout, onAbandon]);
-
   useEffect(() => {
     if (!mealCycle?.startTime) return;
     
@@ -343,65 +179,8 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   const averageGlucose = calculateAverageGlucose(mealCycle);
   const peakGlucose = calculatePeakGlucose(mealCycle);
 
-  const renderAbandonmentDiagnostic = () => {
-    if (!mealCycle || !mealCycle.startTime) return null;
-
-    const elapsed = Date.now() - mealCycle.startTime;
-    const minutesElapsed = elapsed / (60 * 1000);
-
-    const postprandialReadings = mealCycle.postprandialReadings || {};
-
-    // Convert postprandial readings to actual interval numbers
-    const completedReadings = intervals.filter(interval => 
-      postprandialReadings[interval] !== undefined
-    );
-
-    const upcomingIntervals = intervals.filter(interval => 
-      !postprandialReadings[interval] && interval > Math.max(...completedReadings)
-    );
-
-    const isLastReading = Object.keys(postprandialReadings).includes(Math.max(...intervals).toString());
-    const isLastReadingCompleted = isLastReading ? true : false;
-
-    return (
-      <div className="bg-yellow-100 p-2 mb-4 rounded-lg text-xs">
-        <h3 className="font-bold mb-2">🐞 Abandonment Debug</h3>
-        {(isLastReadingCompleted || minutesElapsed >= cycleTimeout) && (
-          <div className="abandonment-diagnostic">
-            <div className="debug-row">
-              <span>Last Reading Completed:</span>
-              <span>{isLastReadingCompleted.toString()}</span>
-            </div>
-            <div className="debug-row">
-              <span>Minutes Elapsed:</span>
-              <span>{minutesElapsed.toFixed(2)}</span>
-            </div>
-            <div className="debug-row">
-              <span>Cycle Timeout:</span>
-              <span>{cycleTimeout}</span>
-            </div>
-            <div className="debug-row">
-              <span>Completed Readings:</span>
-              <span>{completedReadings.length}/{intervals.length}</span>
-            </div>
-            <div className="debug-row">
-              <span>Postprandial Readings:</span>
-              <span>{JSON.stringify(Object.keys(mealCycle.postprandialReadings || {}))}</span>
-            </div>
-            <div className="debug-row">
-              <span>Should Abandon:</span>
-              <span>true</span>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <>
-      {renderDebugInfo()}
-      {renderAbandonmentDiagnostic()}
       <div className="w-full">
         <Card className="w-full">
           <CardHeader>
@@ -429,7 +208,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="text-destructive hover:bg-destructive/10" 
+                  className="text-destructive hover:text-destructive/80" 
                   onClick={handleAbandon}
                   title="Cancel meal cycle"
                 >
@@ -558,9 +337,9 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
           <CardFooter>
             {mealCycle.status !== 'abandoned' && (
               <Button 
-                variant="destructive" 
+                variant="outline" 
                 onClick={() => onAbandon({ status: 'canceled' })}
-                className="w-full"
+                className="w-full hover:bg-red-100 hover:text-red-700"
               >
                 Cancel Meal Cycle
               </Button>
