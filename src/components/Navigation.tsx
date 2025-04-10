@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useState } from 'react';
+import bannerImage from '@/assets/images/banner.png';
 
 const Navigation = () => {
   const location = useLocation();
@@ -27,7 +28,7 @@ const Navigation = () => {
   return (
     <nav className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between h-16 items-center">
           {/* Hamburger menu - ALWAYS VISIBLE */}
           <div className="flex items-center">
             <Button
@@ -36,26 +37,21 @@ const Navigation = () => {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="text-gray-500 hover:text-gray-700"
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? (
+                <X className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 stroke-[3] text-gray-500 hover:text-gray-700" />
+              ) : (
+                <Menu className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 stroke-[3] text-gray-500 hover:text-gray-700" />
+              )}
             </Button>
           </div>
           
-          {/* Desktop navigation - HIDDEN BY DEFAULT */}
-          <div className="hidden">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  isActive(link.path)
-                    ? 'border-peekdiet-primary text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                }`}
-              >
-                <link.icon className="h-5 w-5 mr-2" />
-                {link.label}
-              </Link>
-            ))}
+          {/* Banner Image - Centered */}
+          <div className="flex-grow flex justify-center items-center">
+            <img 
+              src={bannerImage} 
+              alt="PeekDiet Banner" 
+              className="max-h-10 max-w-[200px] object-contain"
+            />
           </div>
           
           <div className="flex items-center">
@@ -127,4 +123,4 @@ const Navigation = () => {
   );
 };
 
-export default Navigation; 
+export default Navigation;
