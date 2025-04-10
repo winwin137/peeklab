@@ -70,7 +70,7 @@ const MealCycleList: React.FC<MealCycleListProps> = ({ mealCycles, onSelect }) =
       )}
       <h2 className="text-xl font-semibold">Recent Meal Cycles</h2>
       
-      {mealCycles.slice(0, 5).map(cycle => {
+      {mealCycles.slice(0, 2).map(cycle => {
         const averageGlucose = calculateAverageGlucose(cycle);
         const peakGlucose = calculatePeakGlucose(cycle);
         

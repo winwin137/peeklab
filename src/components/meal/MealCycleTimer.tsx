@@ -50,6 +50,16 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       setElapsedTime(elapsed);
       const nextReadingData = findNextReading();
       setNextReading(nextReadingData);
+
+      // Check if the final (6th) reading is completed
+      const finalReadingInterval = intervals[intervals.length - 1];
+      const hasFinalReading = !!mealCycle.postprandialReadings[finalReadingInterval];
+
+      // Only complete the cycle if final reading exists
+      if (hasFinalReading && mealCycle.status !== 'completed' && onAbandon) {
+        console.log('Final reading completed. Automatically completing meal cycle.');
+        onAbandon({ status: 'completed' });
+      }
     };
     
     const findNextReading = () => {
@@ -80,7 +90,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
     const interval = setInterval(updateElapsedTime, 1000);
     
     return () => clearInterval(interval);
-  }, [mealCycle?.startTime, mealCycle?.postprandialReadings, mealCycle?.status, getNotificationStatus, intervals, mode]);
+  }, [mealCycle?.startTime, mealCycle?.postprandialReadings, mealCycle?.status, getNotificationStatus, intervals, mode, onAbandon]);
   
   const formatElapsedTime = () => {
     const totalSeconds = Math.floor(elapsedTime / 1000);
