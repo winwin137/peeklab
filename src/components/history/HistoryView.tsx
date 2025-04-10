@@ -1,203 +1,180 @@
-import React, { useState, useMemo } from 'react';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { 
+  Accordion, 
+  AccordionItem, 
+  AccordionItemHeading, 
+  AccordionItemButton, 
+  AccordionItemPanel 
+} from 'react-accessible-accordion';
+import 'react-accessible-accordion/dist/fancy-example.css';
+
 import { MealCycle, GlucoseReading } from '@/types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import GlucoseGraph from '../meal/GlucoseGraph';
-import AdHocReadingCard from './AdHocReadingCard';
-import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
+import { calculateAverageGlucose } from '@/utils/glucose';
 import { convertFirebaseTime } from '@/utils/date';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
 
 interface HistoryViewProps {
   mealCycles: MealCycle[];
-  adHocReadings: GlucoseReading[];
+  adHocReadings?: GlucoseReading[];
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ mealCycles, adHocReadings }) => {
-  // Group readings by day
-  const groupedReadings = useMemo(() => {
-    const groups: { [key: string]: { 
-      date: Date; 
-      mealCycles: MealCycle[]; 
-      adHocReadings: GlucoseReading[];
-      dailyAverage: number | null;
-    } } = {};
+const getCardColor = (value: number) => {
+  if (value < 65) return 'text-blue-600';
+  if (value <= 90) return 'text-green-600';
+  if (value <= 105) return 'text-yellow-600';
+  if (value <= 140) return 'text-orange-600';
+  if (value <= 180) return 'text-red-600';
+  return 'text-purple-600';
+};
 
-    // Process meal cycles
+const HistoryView: React.FC<HistoryViewProps> = ({ mealCycles, adHocReadings = [] }) => {
+  // Group meal cycles by date
+  const groupedMealCycles = React.useMemo(() => {
+    const groups: { [date: string]: MealCycle[] } = {};
+    
     mealCycles.forEach(cycle => {
-      const dateKey = format(new Date(cycle.startTime), 'yyyy-MM-dd');
-      if (!groups[dateKey]) {
-        groups[dateKey] = {
-          date: new Date(cycle.startTime),
-          mealCycles: [],
-          adHocReadings: [],
-          dailyAverage: null
-        };
-      }
-      groups[dateKey].mealCycles.push(cycle);
-    });
-
-    // Process ad hoc readings
-    adHocReadings.forEach(reading => {
-      const dateKey = format(new Date(reading.timestamp), 'yyyy-MM-dd');
-      if (!groups[dateKey]) {
-        groups[dateKey] = {
-          date: new Date(reading.timestamp),
-          mealCycles: [],
-          adHocReadings: [],
-          dailyAverage: null
-        };
-      }
-      groups[dateKey].adHocReadings.push(reading);
-    });
-
-    // Calculate daily averages
-    Object.values(groups).forEach(group => {
-      const allReadings = [
-        ...group.mealCycles.flatMap(cycle => [
-          cycle.preprandialReading,
-          ...Object.values(cycle.postprandialReadings)
-        ]),
-        ...group.adHocReadings
-      ].filter(reading => 
-        reading && 
-        reading.value !== null && 
-        reading.value !== undefined && 
-        reading.value > 0
-      );
-
-      if (allReadings.length > 0) {
-        const sum = allReadings.reduce((acc, reading) => acc + reading.value, 0);
-        group.dailyAverage = Math.round(sum / allReadings.length);
+      if (cycle.preprandialReading) {
+        const date = new Date(cycle.preprandialReading.timestamp).toDateString();
+        if (!groups[date]) groups[date] = [];
+        groups[date].push(cycle);
       }
     });
 
     return groups;
-  }, [mealCycles, adHocReadings]);
+  }, [mealCycles]);
 
-  // Sort days in descending order
-  const sortedDays = useMemo(() => {
-    return Object.values(groupedReadings)
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [groupedReadings]);
+  const calculateDailyAverageGlucose = (cycles: MealCycle[]) => {
+    const averages = cycles
+      .map(calculateAverageGlucose)
+      .filter(avg => avg !== null) as number[];
+    
+    return averages.length > 0 
+      ? averages.reduce((a, b) => a + b, 0) / averages.length 
+      : null;
+  };
+
+  // Prepare data for daily averages graph
+  const dailyAveragesData = React.useMemo(() => {
+    return Object.entries(groupedMealCycles)
+      .map(([date, cycles]) => {
+        const dailyAverage = calculateDailyAverageGlucose(cycles);
+        return {
+          name: format(new Date(date), 'MM/dd'),
+          glucose: dailyAverage !== null ? Number(dailyAverage.toFixed(1)) : null
+        };
+      })
+      .filter(item => item.glucose !== null)
+      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+  }, [groupedMealCycles]);
+
+  // Calculate running average of daily averages
+  const runningAverage = React.useMemo(() => {
+    const dailyAverages = Object.entries(groupedMealCycles)
+      .map(([_, cycles]) => calculateDailyAverageGlucose(cycles))
+      .filter(avg => avg !== null) as number[];
+
+    return dailyAverages.length > 0 
+      ? dailyAverages.reduce((a, b) => a + b, 0) / dailyAverages.length 
+      : null;
+  }, [groupedMealCycles]);
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="list">List View</TabsTrigger>
-          <TabsTrigger value="adhoc">Ad Hoc Readings</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="list">
-          <div className="space-y-8">
-            {sortedDays.map(({ date, mealCycles, adHocReadings, dailyAverage }) => (
-              <div key={date.toISOString()} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">
-                    {format(date, 'PPP')}
-                  </h2>
-                  {dailyAverage !== null && (
-                    <span className="text-lg font-semibold">
-                      Daily Average: {dailyAverage} mg/dL
-                    </span>
-                  )}
-                </div>
-                
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">Glucose History</h1>
+      
+      {/* Running Average Accordion Card */}
+      <Accordion allowZeroExpanded>
+        <AccordionItem uuid="running-average">
+          <AccordionItemHeading>
+            <AccordionItemButton className="bg-white p-4 border-b hover:bg-gray-50 transition-colors">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold">Running Average</span>
+                {runningAverage !== null && (
+                  <span className={`font-bold ${getCardColor(runningAverage)}`}>
+                    {runningAverage.toFixed(1)} mg/dL
+                  </span>
+                )}
+              </div>
+            </AccordionItemButton>
+          </AccordionItemHeading>
+          <AccordionItemPanel className="p-4 bg-gray-50">
+            <div className="w-full h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={dailyAveragesData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" />
+                  <YAxis 
+                    domain={['dataMin - 10', 'dataMax + 10']} 
+                    label={{ value: 'Glucose (mg/dL)', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [`${value} mg/dL`, 'Daily Average']}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="glucose" 
+                    stroke="#8B5CF6" 
+                    strokeWidth={2} 
+                    dot={{ r: 4 }} 
+                    activeDot={{ r: 6 }} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </AccordionItemPanel>
+        </AccordionItem>
+      </Accordion>
+
+      {/* Existing Accordion for Daily Cycles */}
+      <Accordion allowZeroExpanded>
+        {Object.entries(groupedMealCycles).map(([date, cycles]) => {
+          const dailyAverage = calculateDailyAverageGlucose(cycles);
+          
+          return (
+            <AccordionItem key={date} uuid={date}>
+              <AccordionItemHeading>
+                <AccordionItemButton className="bg-white p-4 border-b hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">{date}</span>
+                    {dailyAverage !== null && (
+                      <span className={`font-bold ${getCardColor(dailyAverage)}`}>
+                        {dailyAverage.toFixed(1)} mg/dL
+                      </span>
+                    )}
+                  </div>
+                </AccordionItemButton>
+              </AccordionItemHeading>
+              <AccordionItemPanel className="p-4 bg-gray-50">
                 <div className="space-y-4">
-                  {mealCycles.map(cycle => {
-                    const averageGlucose = calculateAverageGlucose(cycle);
-                    const peakGlucose = calculatePeakGlucose(cycle);
-                    
-                    return (
-                      <Card key={cycle.id}>
-                        <CardHeader>
-                          <CardTitle className="text-lg">
-                            {convertFirebaseTime(cycle.startTime)}
-                          </CardTitle>
-                          <CardDescription>
-                            ID: {cycle.uniqueId}
-                            {averageGlucose !== null && (
-                              <span className="ml-2 font-semibold">
-                                Average: {averageGlucose} mg/dL
-                              </span>
-                            )}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          {(cycle.status === 'completed' || 
-                            cycle.status === 'abandoned' ||
-                            Object.keys(cycle.postprandialReadings).length > 0) && (
-                            <div className="h-32 w-full mt-2">
-                              <GlucoseGraph mealCycle={cycle} />
-                            </div>
-                          )}
-                          
-                          <div className="grid grid-cols-4 gap-1 text-xs mt-3">
-                            <div className="text-muted-foreground text-right">Pre:</div>
-                            <div className="font-semibold">
-                              {cycle.preprandialReading 
-                                ? `${cycle.preprandialReading.value} mg/dL` 
-                                : '—'}
-                            </div>
-                            
-                            <div className="text-muted-foreground text-right">Peak:</div>
-                            <div className="font-semibold">
-                              {peakGlucose ? `${peakGlucose} mg/dL` : '—'}
-                            </div>
-                            
-                            <div className="text-muted-foreground text-right">Readings:</div>
-                            <div className="font-semibold">
-                              {Object.keys(cycle.postprandialReadings).length + 
-                                (cycle.preprandialReading ? 1 : 0)}
-                            </div>
-                            
-                            <div className="text-muted-foreground text-right">Status:</div>
-                            <div className="font-semibold capitalize">
-                              {cycle.status}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  
-                  {adHocReadings.map(reading => (
-                    <AdHocReadingCard key={reading.id} reading={reading} />
+                  {cycles.map(cycle => (
+                    <div key={cycle.id} className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="flex justify-between items-center mb-2">
+                        <span>{convertFirebaseTime(cycle.preprandialReading?.timestamp)}</span>
+                        {calculateAverageGlucose(cycle) !== null && (
+                          <span className="font-semibold">
+                            Avg: {calculateAverageGlucose(cycle)?.toFixed(1)} mg/dL
+                          </span>
+                        )}
+                      </div>
+                      <div className="h-40 w-full">
+                        <GlucoseGraph mealCycle={cycle} />
+                      </div>
+                    </div>
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="adhoc">
-          <div className="space-y-8">
-            {sortedDays.map(({ date, adHocReadings }) => (
-              adHocReadings.length > 0 && (
-                <div key={date.toISOString()} className="space-y-4">
-                  <h2 className="text-xl font-semibold">
-                    {format(date, 'PPP')}
-                  </h2>
-                  <div className="space-y-4">
-                    {adHocReadings.map(reading => (
-                      <AdHocReadingCard key={reading.id} reading={reading} />
-                    ))}
-                  </div>
-                </div>
-              )
-            ))}
-          </div>
-        </TabsContent>
-        <TabsContent value="calendar">
-          <div className="text-center p-4 text-muted-foreground">
-            Calendar view coming soon
-          </div>
-        </TabsContent>
-      </Tabs>
+              </AccordionItemPanel>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
     </div>
   );
 };
 
-export default HistoryView; 
+export default HistoryView;

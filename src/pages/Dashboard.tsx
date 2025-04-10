@@ -39,7 +39,8 @@ const Dashboard: React.FC = () => {
   const [inputMode, setInputMode] = useState<InputMode>('idle');
   const [currentMinutesMark, setCurrentMinutesMark] = useState<number | null>(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
-  
+  const [modalStatus, setModalStatus] = useState<string | undefined>();
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -100,6 +101,10 @@ const Dashboard: React.FC = () => {
     }
   }, [activeMealCycle, pendingMealCycle]);
   
+  useEffect(() => {
+    console.log('🚨 DASHBOARD: modalStatus changed', { modalStatus });
+  }, [modalStatus]);
+  
   const handleStartMeal = () => {
     setInputMode('preprandial');
   };
@@ -152,9 +157,33 @@ const Dashboard: React.FC = () => {
   };
   
   const handleAbandonConfirm = async () => {
-    const success = await abandonMealCycle({ status: 'canceled' });
-    if (success) {
-      setShowAbandonConfirm(false);
+    console.log('🚨 Handling Abandon Confirm', {
+      currentActiveMealCycle: activeMealCycle,
+      currentModalStatus: modalStatus
+    });
+
+    try {
+      // Set modal status before abandoning
+      setModalStatus('canceled');
+
+      const success = await abandonMealCycle({ 
+        status: 'canceled', 
+        newVar: "Hello World" 
+      });
+
+      if (success) {
+        console.log('🚨 Meal Cycle Successfully Canceled');
+        
+        // Close the modal explicitly
+        setShowAbandonConfirm(false);
+        setModalStatus(undefined);
+      } else {
+        console.error('🚨 Failed to Cancel Meal Cycle');
+        // Optionally handle failure scenario
+      }
+    } catch (error) {
+      console.error('🚨 Error in Abandoning Meal Cycle:', error);
+      // Handle error, potentially show an error modal
     }
   };
 
@@ -166,47 +195,72 @@ const Dashboard: React.FC = () => {
   };
   
   const getDialogTitle = (status?: string) => {
+    console.log('🚨 getDialogTitle called with status:', status);
     switch (status) {
-      case 'abandoned':
-        return 'Session Abandoned';
-      case 'completed':
-        return 'Meal Cycle Completed';
+      case 'active':
+        return 'Confirm Cancellation';
       case 'canceled':
         return 'Meal Cycle Canceled';
+      case 'completed':
+        return 'Meal Cycle Completed';
+      case 'abandoned':
+        return 'Session Abandoned';
       default:
         return 'Unexpected';
     }
   };
 
   const getMessage = (status?: string) => {
+    console.log('🚨 getMessage called with status:', status);
     switch (status) {
-      case 'abandoned':
-        return 'Please press Continue.';
-      case 'completed':
-        return 'Your meal cycle tracking is complete.';
+      case 'active':
+        return 'Are you sure you want to cancel this meal cycle?';
       case 'canceled':
         return 'This will mark your current meal cycle as canceled. You cannot undo this action.';
+      case 'completed':
+        return 'Your meal cycle tracking is complete.';
+      case 'abandoned':
+        return 'Please press Continue.';
       default:
-        return 'oops';
+        return 'Oops.';
     }
   };
 
   const renderModalButtons = (status?: string) => {
+    console.log('🚨 Rendering Modal Buttons for status:', status);
+    
+    const closeModal = () => {
+      console.log('🚨 Closing Abandon Confirm Modal');
+      setShowAbandonConfirm(false);
+      setModalStatus(undefined);
+    };
+    
     switch (status) {
-      case 'abandoned':
+      case 'active':
         return (
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center space-x-4">
             <Button 
-              variant="default" 
-              onClick={() => setShowAbandonConfirm(false)}
+              variant="destructive" 
+              onClick={() => {
+                console.log('🚨 Confirmed Meal Cycle Cancellation');
+                handleAbandonConfirm();
+              }}
+              className="w-full"
             >
-              Continue
+              Proceed with Cancellation
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={closeModal}
+              className="w-full"
+            >
+              Close
             </Button>
           </div>
         );
-      case 'completed':
+      case 'canceled':
         return (
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center">
             <Button 
               variant="default" 
               onClick={() => setShowAbandonConfirm(false)}
@@ -215,34 +269,36 @@ const Dashboard: React.FC = () => {
             </Button>
           </div>
         );
-      case 'canceled':
+      case 'completed':
         return (
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center">
             <Button 
               variant="default" 
               onClick={() => setShowAbandonConfirm(false)}
             >
-              Dismiss
+              OK
+            </Button>
+          </div>
+        );
+      case 'abandoned':
+        return (
+          <div className="flex justify-center">
+            <Button 
+              variant="default" 
+              onClick={() => setShowAbandonConfirm(false)}
+            >
+              Continue
             </Button>
           </div>
         );
       default:
         return (
-          <div className="flex space-x-2 justify-center mt-4">
+          <div className="flex justify-center">
             <Button 
               variant="outline" 
               onClick={() => setShowAbandonConfirm(false)}
             >
-              ?
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => {
-                handleAbandonConfirm();
-                setShowAbandonConfirm(false);
-              }}
-            >
-              ??
+              Close
             </Button>
           </div>
         );
@@ -343,7 +399,64 @@ const Dashboard: React.FC = () => {
       />
     );
   };
-  
+
+  const renderAbandonConfirmDialog = () => {
+    console.log('🚨 Rendering Abandon Confirm Dialog', {
+      showAbandonConfirm,
+      modalStatus,
+      activeMealCycleStatus: activeMealCycle?.status
+    });
+
+    return (
+      <Dialog 
+        open={showAbandonConfirm} 
+        onOpenChange={(open) => {
+          // Reset modal status when dialog closes
+          if (!open) setModalStatus(undefined);
+          setShowAbandonConfirm(open);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>{getDialogTitle(activeMealCycle?.status)}</DialogTitle>
+          <DialogDescription>
+            {getMessage(activeMealCycle?.status)}
+          </DialogDescription>
+          
+          {/* Diagnostic Information */}
+          <div className="bg-muted p-4 rounded-md mb-4 text-xs">
+            <h3 className="font-bold mb-2">Comprehensive Diagnostic Information</h3>
+            <pre>{JSON.stringify({
+              'modalStatus': modalStatus,
+              'activeMealCycle.status': activeMealCycle?.status,
+              'showAbandonConfirm': showAbandonConfirm,
+              
+              // Additional Diagnostic Variables
+              'activeMealCycle.id': activeMealCycle?.id,
+              'activeMealCycle.startTime': activeMealCycle?.startTime 
+                ? new Date(activeMealCycle.startTime).toISOString() 
+                : null,
+              'activeMealCycle.preprandialReading': activeMealCycle?.preprandialReading?.value,
+              'mealCycles.length': mealCycles.length,
+              'inputMode': inputMode,
+              'currentMinutesMark': currentMinutesMark,
+              
+              // Timing and Performance Diagnostics
+              'Timestamp': new Date().toISOString(),
+              'Performance': {
+                'renderTime': performance.now(),
+                'memoryUsed': performance.memory 
+                  ? `${(performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`
+                  : 'N/A'
+              }
+            }, null, 2)}</pre>
+          </div>
+          
+          {renderModalButtons(activeMealCycle?.status)}
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <main className="flex-1 container max-w-md mx-auto p-4">
@@ -370,26 +483,7 @@ const Dashboard: React.FC = () => {
       
       <Footer />
       
-      <Dialog open={showAbandonConfirm} onOpenChange={setShowAbandonConfirm}>
-        <DialogContent>
-          <DialogTitle className="text-center">
-            {getDialogTitle(activeMealCycle?.status)}
-          </DialogTitle>
-          <DialogDescription className="text-center">
-            {getMessage(activeMealCycle?.status)}
-          </DialogDescription>
-          
-          <div className="p-6 text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-destructive" />
-              </div>
-            </div>
-            
-            {renderModalButtons(activeMealCycle?.status)}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {renderAbandonConfirmDialog()}
     </div>
   );
 };

@@ -313,7 +313,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
       return; // Prevent double abandonment
     }
     console.log('MealCycleTimer: Abandoning meal cycle');
-    onAbandon();
+    onAbandon({ status: 'canceled' });
   };
 
   // Add a check to prevent rendering if cycle is past the configured timeout
@@ -558,9 +558,9 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
           <CardFooter>
             {mealCycle.status !== 'abandoned' && (
               <Button 
-                variant="outline" 
-                className="w-full text-destructive hover:bg-destructive/10" 
-                onClick={handleAbandon}
+                variant="destructive" 
+                onClick={() => onAbandon({ status: 'canceled' })}
+                className="w-full"
               >
                 Cancel Meal Cycle
               </Button>
