@@ -8,13 +8,15 @@ import { convertFirebaseTime } from '@/utils/date';
 import { useMealCycles } from '@/hooks/useMealCycles';
 import { getCurrentCycleTimeout } from '@/config';
 import { Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MealCycleListProps {
   mealCycles: MealCycle[];
   onSelect?: (mealCycleId: string) => void;
+  onDeleteSession?: (mealCycleId: string) => void;
 }
 
-const MealCycleList: React.FC<MealCycleListProps> = ({ mealCycles, onSelect }) => {
+const MealCycleList: React.FC<MealCycleListProps> = ({ mealCycles, onSelect, onDeleteSession }) => {
   const { activeMealCycle } = useMealCycles();
   const [timeRemaining, setTimeRemaining] = React.useState<number | null>(null);
 
@@ -105,6 +107,16 @@ const MealCycleList: React.FC<MealCycleListProps> = ({ mealCycles, onSelect }) =
                 >
                   {cycle.status}
                 </Badge>
+                {onDeleteSession && cycle.status !== 'active' && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="ml-2"
+                    onClick={() => onDeleteSession(cycle.id)}
+                  >
+                    Delete
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>

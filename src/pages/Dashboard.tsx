@@ -27,6 +27,8 @@ const Dashboard: React.FC = () => {
     recordFirstBite, 
     recordPostprandialReading, 
     abandonMealCycle,
+    deleteMealCycle,
+    clearAllSessions,
     isOffline,
     pendingMealCycle,
     error,
@@ -194,6 +196,20 @@ const Dashboard: React.FC = () => {
     }
   };
   
+  const handleDeleteSession = async (mealCycleId: string) => {
+    const result = await deleteMealCycle(mealCycleId);
+    if (result) {
+      // Optional: Add any additional logic after successful deletion
+    }
+  };
+
+  const handleClearAllSessions = async () => {
+    const result = await clearAllSessions();
+    if (result) {
+      // Optional: Add any additional logic after successful clearing
+    }
+  };
+
   const getDialogTitle = (status?: string) => {
     return ''; // Remove title
   };
@@ -376,7 +392,16 @@ const Dashboard: React.FC = () => {
           )}
           
           {mealCycles.length > 0 && inputMode === 'idle' && (
-            <MealCycleList mealCycles={mealCycles} />
+            <div>
+              <MealCycleList mealCycles={mealCycles} onDeleteSession={handleDeleteSession} />
+              <Button 
+                variant="destructive" 
+                onClick={handleClearAllSessions}
+                className="w-full h-10 mt-4"
+              >
+                Clear All Sessions
+              </Button>
+            </div>
           )}
         </div>
       </main>

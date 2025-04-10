@@ -37,13 +37,14 @@ import {
   enableNetwork,
   disableNetwork,
   getDoc,
-  setDoc
+  setDoc,
+  batch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { MealCycle, GlucoseReading } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getCurrentTimeout, getCurrentIntervals } from '@/config';
+import { getCurrentTimeout, getCurrentIntervals, getCurrentCycleTimeout } from '@/config';
 
 interface PendingAction {
   type: 'start' | 'firstBite' | 'reading' | 'abandon';
@@ -57,7 +58,7 @@ const generateUniqueId = (): string => {
   return `mc-${timestamp}-${randomStr}`;
 };
 
-export const useMealCycles = () => {
+export const useMealCycles = (mode: 'original' | 'testing' = 'original') => {
   const { user } = useAuth();
   const [mealCycles, setMealCycles] = useState<MealCycle[]>([]);
   const [activeMealCycle, setActiveMealCycle] = useState<MealCycle | null>(null);
@@ -462,7 +463,7 @@ export const useMealCycles = () => {
       const now = Timestamp.now();
       const nowMillis = now.toMillis();
       const expectedTime = activeMealCycle.startTime + (minutesMark * 60 * 1000);
-      const timeoutMinutes = getCurrentTimeout();
+      const timeoutMinutes = getCurrentTimeout(mode);
       const isLate = nowMillis > (expectedTime + (timeoutMinutes * 60 * 1000));
       
       if (isLate) {
@@ -558,7 +559,7 @@ export const useMealCycles = () => {
         return false;
       }
       
-      const lastInterval = getCurrentIntervals('testing').readings[5]; // 30 minutes
+      const lastInterval = getCurrentIntervals(mode).readings[5]; // 30 minutes
       const isLastReading = activeMealCycle.postprandialReadings && 
         activeMealCycle.postprandialReadings[lastInterval] !== undefined;
 
@@ -567,7 +568,7 @@ export const useMealCycles = () => {
       }
       
       // Automatically set to completed if all readings are present
-      const intervals = getCurrentIntervals('testing').readings;
+      const intervals = getCurrentIntervals(mode).readings;
       const allReadingsSubmitted = intervals.every(interval => 
         activeMealCycle.postprandialReadings && 
         activeMealCycle.postprandialReadings[interval] !== undefined
@@ -652,6 +653,82 @@ export const useMealCycles = () => {
     }
   };
 
+  const deleteMealCycle = async (mealCycleId: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to delete meal cycles.',
+        variant: 'destructive'
+      });
+      return false;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'mealCycles', mealCycleId));
+
+      // Remove the deleted meal cycle from local state
+      setMealCycles(prev => prev.filter(cycle => cycle.id !== mealCycleId));
+
+      toast({
+        title: 'Success',
+        description: 'Meal cycle deleted successfully.',
+        variant: 'default'
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting meal cycle:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete meal cycle.',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  };
+
+  const clearAllSessions = async () => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to clear sessions.',
+        variant: 'destructive'
+      });
+      return false;
+    }
+
+    try {
+      // Batch delete all meal cycles for the user
+      const batch = batch(db);
+      const mealCyclesRef = collection(db, 'mealCycles');
+      const q = query(mealCyclesRef, where('userId', '==', user.uid));
+      const snapshot = await getDocs(q);
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+      await batch.commit();
+
+      // Clear local state
+      setMealCycles([]);
+      setActiveMealCycle(null);
+
+      toast({
+        title: 'Success',
+        description: 'All meal cycles have been deleted.',
+        variant: 'default'
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error clearing all sessions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to clear all sessions.',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  };
+
   return {
     mealCycles,
     activeMealCycle,
@@ -663,6 +740,8 @@ export const useMealCycles = () => {
     startMealCycle,
     recordFirstBite,
     recordPostprandialReading,
-    abandonMealCycle
+    abandonMealCycle,
+    deleteMealCycle,
+    clearAllSessions
   };
 };

@@ -68,21 +68,21 @@ export const TESTING_CONFIG = {
 };
 
 // Helper function to get current intervals
-export const getCurrentIntervals = (mode: 'original' | 'testing' = 'testing') => {
+export const getCurrentIntervals = (mode: 'original' | 'testing' = 'original') => {
   return mode === 'testing' 
     ? TESTING_CONFIG.intervals.testing 
     : TESTING_CONFIG.intervals.original;
 };
 
 // Helper function to get current timeout
-export const getCurrentTimeout = (mode: 'original' | 'testing' = 'testing') => {
+export const getCurrentTimeout = (mode: 'original' | 'testing' = 'original') => {
   return mode === 'testing' 
     ? TESTING_CONFIG.timeout.testing 
     : TESTING_CONFIG.timeout.original;
 };
 
 // Helper function to get current cycle timeout
-export const getCurrentCycleTimeout = (mode: 'original' | 'testing' = 'testing') => {
+export const getCurrentCycleTimeout = (mode: 'original' | 'testing' = 'original') => {
   return mode === 'testing' 
     ? TESTING_CONFIG.cycleTimeout.testing 
     : TESTING_CONFIG.cycleTimeout.original;

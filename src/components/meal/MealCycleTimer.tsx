@@ -26,7 +26,7 @@ const MealCycleTimer: React.FC<MealCycleTimerProps> = ({
   mealCycle,
   onTakeReading,
   onAbandon,
-  mode = 'testing' // Add mode prop
+  mode = 'original' // Changed from 'testing' to 'original'
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [nextReading, setNextReading] = useState<{minutesMark: number, timeRemaining: number} | null>(null);
