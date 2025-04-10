@@ -7,10 +7,35 @@ import { useMealCycles } from '@/hooks/useMealCycles';
 import { useAdHocReadings } from '@/hooks/useAdHocReadings';
 import AdHocReadingCard from '@/components/history/AdHocReadingCard';
 import { calculateAverageGlucose, calculatePeakGlucose } from '@/utils/glucose';
+import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const MealSessions: React.FC = () => {
-  const { mealCycles, loading: mealCyclesLoading } = useMealCycles();
-  const { adHocReadings, loading: adHocReadingsLoading, error: adHocError } = useAdHocReadings();
+  const { 
+    mealCycles, 
+    loading: mealCyclesLoading, 
+    deleteMealCycle 
+  } = useMealCycles();
+  const { 
+    adHocReadings, 
+    loading: adHocReadingsLoading, 
+    error: adHocError,
+    deleteAdHocReading 
+  } = useAdHocReadings();
+
+  const handleDeleteMealCycle = async (mealCycleId: string) => {
+    const result = await deleteMealCycle(mealCycleId);
+    if (result) {
+      console.log(`Meal cycle ${mealCycleId} deleted successfully`);
+    }
+  };
+
+  const handleDeleteAdHocReading = async (readingId: string) => {
+    const result = await deleteAdHocReading(readingId);
+    if (result) {
+      console.log(`Ad hoc reading ${readingId} deleted successfully`);
+    }
+  };
 
   console.log('MealSessions - Ad Hoc Readings:', {
     count: adHocReadings.length,
@@ -119,7 +144,19 @@ const MealSessions: React.FC = () => {
               const peakGlucose = calculatePeakGlucose(cycle);
               
               return (
-                <Card key={cycle.id}>
+                <Card key={cycle.id} className="relative">
+                  {/* Delete Button for Completed, Canceled, or Abandoned Cycles */}
+                  {['completed', 'canceled', 'abandoned'].includes(cycle.status) && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute top-2 right-2 z-10"
+                      onClick={() => handleDeleteMealCycle(cycle.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                  
                   <CardHeader>
                     <CardTitle>
                       {format(cycle.startTime, 'p')}
@@ -199,15 +236,21 @@ const MealSessions: React.FC = () => {
                 </Card>
               );
             })}
-            
-            {adHocReadings.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">Ad Hoc Readings</h3>
-                {adHocReadings.map(reading => (
-                  <AdHocReadingCard key={reading.id} reading={reading} />
-                ))}
-              </div>
-            )}
+
+            {/* Ad Hoc Readings */}
+            {adHocReadings.map(reading => (
+              <Card key={reading.id} className="relative">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute top-2 right-2 z-10"
+                  onClick={() => handleDeleteAdHocReading(reading.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+                <AdHocReadingCard reading={reading} />
+              </Card>
+            ))}
           </div>
         </div>
       ))}
