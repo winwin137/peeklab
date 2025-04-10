@@ -1,5 +1,5 @@
-VERSION=v5.1.2
-WHATEVS="Banner peekdiet"
+VERSION=v5.1.3
+WHATEVS="some iphone auth page spacing issues"
 echo $VERSION
 echo $WHATEVS
 #exit 
