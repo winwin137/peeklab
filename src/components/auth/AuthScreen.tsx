@@ -28,7 +28,7 @@ const AuthScreen: React.FC = () => {
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-1">
-              <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="email">SCIENTIFIC METHODOLOGY FOR PERSONAL HEALTH</TabsTrigger>
             </TabsList>
             <TabsContent value="email">
               <EmailAuthForm />

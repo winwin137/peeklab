@@ -1,5 +1,5 @@
-VERSION=v5.1.3
-WHATEVS="some iphone auth page spacing issues"
+VERSION=v5.1.4
+WHATEVS="more minor look and feel stuff"
 echo $VERSION
 echo $WHATEVS
 #exit 
@@ -10,10 +10,10 @@ echo $WHATEVS
 git add .
 
 # 3. Commit with a descriptive message
-git commit -m "PRODP $WHATEVS" 
+git commit -m "PROD $WHATEVS" 
 
 # 4. Create a new annotated tag (recommended for versions)
-git tag -a $VERSION -m "PROD: WHATEVS" 
+git tag -a $VERSION -m "PROD: $WHATEVS" 
 
 # 5. Push both the commit and the new tag to remote
 git push origin main  # Push the commit
