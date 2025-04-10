@@ -39,16 +39,16 @@ const History: React.FC = () => {
     );
   }
 
-  // Filter out any active meal cycles to prevent state conflicts
-  const completedCycles = mealCycles.filter(cycle => 
-    cycle.status === 'completed' || cycle.status === 'abandoned'
+  // Filter to include completed, abandoned, and canceled sessions
+  const historyCycles = mealCycles.filter(cycle => 
+    ['completed', 'abandoned', 'canceled'].includes(cycle.status)
   );
 
   return (
     <div className="min-h-screen bg-background">
       <main className="container max-w-2xl mx-auto p-4">
         <HistoryView 
-          mealCycles={completedCycles}
+          mealCycles={historyCycles}
           adHocReadings={adHocReadings}
         />
       </main>
@@ -56,4 +56,4 @@ const History: React.FC = () => {
   );
 };
 
-export default History; 
+export default History;

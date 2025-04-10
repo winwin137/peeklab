@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GithubAuthProvider, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
@@ -48,7 +48,6 @@ try {
 
 // Auth providers
 const googleProvider = new GoogleAuthProvider();
-const githubProvider = new GithubAuthProvider();
 
 // Configure auth providers
 googleProvider.addScope('https://www.googleapis.com/auth/userinfo.email');
@@ -59,16 +58,11 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-githubProvider.setCustomParameters({
-  prompt: 'consent'
-});
-
 export { 
   app, 
   db, 
   auth, 
   storage, 
   analytics, 
-  googleProvider, 
-  githubProvider 
+  googleProvider 
 };

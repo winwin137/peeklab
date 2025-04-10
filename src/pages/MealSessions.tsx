@@ -125,7 +125,7 @@ const MealSessions: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-[2rem]">
       {sortedDays.map(({ date, mealCycles, adHocReadings, dailyAverage }) => (
         <div key={date.toISOString()} className="space-y-4">
           <div className="flex items-center justify-between">

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import GithubAuthButton from './GithubAuthButton';
 import GoogleAuthButton from './GoogleAuthButton';
 import EmailAuthForm from './EmailAuthForm';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const APP_VERSION = '1.6.0';
 
 const AuthScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('social');
+  const [activeTab, setActiveTab] = useState<string>('email');
   const { createTestAccount, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -24,42 +23,32 @@ const AuthScreen: React.FC = () => {
             <span className="text-peekdiet-primary">Peek</span>
             <span className="text-peekdiet-accent">Diet</span>
           </CardTitle>
-          <CardDescription className="text-center">
-            Track your glucose response to meals with precision
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2 text-center">
-            <h3 className="text-xl font-semibold">Sign in to your account</h3>
-            <p className="text-sm text-muted-foreground">
-              Monitor your blood glucose levels and take control of your health
-            </p>
-          </div>
-
-          <Tabs defaultValue="social" onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="social">Social</TabsTrigger>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-1">
               <TabsTrigger value="email">Email</TabsTrigger>
             </TabsList>
-            <TabsContent value="social" className="space-y-4 pt-4">
-              <GoogleAuthButton />
-              <GithubAuthButton />
-            </TabsContent>
-            <TabsContent value="email" className="pt-4">
+            <TabsContent value="email">
               <EmailAuthForm />
             </TabsContent>
           </Tabs>
-          
-          {/* Test Account Button */}
-          <div className="pt-4 border-t">
-            <Button
-              variant="outline"
-              className="w-full text-sm"
-              onClick={createTestAccount}
-              disabled={loading}
-            >
-              Use Test Account (test@peekdiet.com / Asdf1234!)
-            </Button>
+
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-center">
+              <GoogleAuthButton />
+            </div>
+
+            <div className="text-center">
+              <Button 
+                variant="outline" 
+                className="w-full text-sm"
+                onClick={createTestAccount}
+                disabled={loading}
+              >
+                Use Test Account (test@peekdiet.com / Asdf1234!)
+              </Button>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">

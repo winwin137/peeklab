@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import Purchases from 'react-native-purchases';
+import * as Purchases from 'react-native-purchases';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // RevenueCat Configuration
-const REVENUE_CAT_API_KEY = 'YOUR_REVENUECAT_API_KEY'; // Replace with your actual key
+const REVENUE_CAT_API_KEY = 'pk_test_51RCPzyFzPn99KThOwPJFVwtNkB7bBQ8s51cqh217zLTd175jnaT2pQCz80HrP0FHSpuw0RKFtvZ9UOIa5wJlZhm700MP2nZ21F';
 const MONTHLY_PACKAGE_ID = 'monthly_pro';
 const ANNUAL_PACKAGE_ID = 'annual_pro';
 
@@ -22,13 +22,13 @@ const Paywall: React.FC<PaywallProps> = ({ isOpen, onClose, onUpgradeSuccess }) 
     const initializeRevenueCat = async () => {
       try {
         // Configure RevenueCat
-        Purchases.configure({ 
+        Purchases.default.configure({ 
           apiKey: REVENUE_CAT_API_KEY,
           // Add platform-specific app ID if needed
         });
 
         // Fetch available packages
-        const offerings = await Purchases.getOfferings();
+        const offerings = await Purchases.default.getOfferings();
         if (offerings.current?.availablePackages) {
           setPackages(offerings.current.availablePackages);
         }
@@ -45,7 +45,7 @@ const Paywall: React.FC<PaywallProps> = ({ isOpen, onClose, onUpgradeSuccess }) 
   const handlePurchase = async (pkg: Purchases.Package) => {
     setIsLoading(true);
     try {
-      const { customerInfo } = await Purchases.purchasePackage(pkg);
+      const { customerInfo } = await Purchases.default.purchasePackage(pkg);
       
       // Check if purchase was successful
       if (customerInfo.entitlements.active['pro']) {

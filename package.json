@@ -7,7 +7,7 @@
     "predeploy": "./scripts/set-version.sh",
     "deploy": "vite build",
     "dev": "vite",
-    "build": "./scripts/set-version.sh && vite build",
+    "build": "./scripts/set-version.sh && vite build && mkdir -p public && cp -R dist/* public/",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
