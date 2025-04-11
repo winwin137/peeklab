@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+
+  // Don't render on login page
+  if (location.pathname === '/login') return null;
 
   return (
     <>

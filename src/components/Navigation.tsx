@@ -12,6 +12,9 @@ const Navigation = () => {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Don't render on login page
+  if (location.pathname === '/login') return null;
+
   const isActive = (path: string) => {
     return location.pathname === path || (path === '/dashboard' && location.pathname === '/');
   };
@@ -30,22 +33,20 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Hamburger menu - ALWAYS VISIBLE */}
-          {location.pathname !== '/login' && (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                {isMobileMenuOpen ? (
-                  <X className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 stroke-[3] text-gray-500 hover:text-gray-700" />
-                ) : (
-                  <Menu className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 stroke-[3] text-gray-500 hover:text-gray-700" />
-                )}
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 stroke-[3] text-gray-500 hover:text-gray-700" />
+              ) : (
+                <Menu className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 stroke-[3] text-gray-500 hover:text-gray-700" />
+              )}
+            </Button>
+          </div>
           
           {/* Banner Image - Centered */}
           <div className="flex-grow flex justify-center items-center">
@@ -96,7 +97,7 @@ const Navigation = () => {
       </div>
 
       {/* Mobile menu - ALWAYS VISIBLE WHEN OPEN */}
-      {location.pathname !== '/login' && isMobileMenuOpen && (
+      {isMobileMenuOpen && (
         <div className="block">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navLinks.map((link) => (
