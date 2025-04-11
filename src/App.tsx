@@ -13,6 +13,7 @@ import TrackGlucose from './pages/TrackGlucose';
 import NotFound from './pages/NotFound';
 import Navigation from './components/Navigation';
 import About from './pages/About';
+import Sidebar from './components/Sidebar';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
       <AuthProvider>
         <div className="min-h-screen bg-gray-50">
           <Navigation />
+          <Sidebar />
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<AuthScreen />} />

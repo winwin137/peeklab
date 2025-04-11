@@ -27,10 +27,14 @@ const AuthScreen: React.FC = () => {
         </CardHeader>
         <div className="w-full flex justify-center mb-4">
           <iframe 
-            src="https://drive.google.com/file/d/0B_6Qo5C8i9eDNjVwWGJCSEJmVEk/preview?resourcekey=0-G5tKH4ogFxjH_KfXIVmOug" 
-            width="209" 
-            height="150" 
-            allow="autoplay"
+            width="560" 
+            height="315" 
+            src="https://www.youtube.com/embed/Q5liSXgmMF4?rel=0&loop=1&playlist=Q5liSXgmMF4&modestbranding=1&controls=1" 
+            title="YouTube video player" 
+            frameBorder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerPolicy="strict-origin-when-cross-origin" 
+            allowFullScreen
             className="max-w-full"
           />
         </div>
