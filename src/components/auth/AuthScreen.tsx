@@ -25,6 +25,15 @@ const AuthScreen: React.FC = () => {
             {/* Removed PeekDiet text */}
           </CardTitle>
         </CardHeader>
+        <div className="w-full flex justify-center mb-4">
+          <iframe 
+            src="https://drive.google.com/file/d/0B_6Qo5C8i9eDNjVwWGJCSEJmVEk/preview?resourcekey=0-G5tKH4ogFxjH_KfXIVmOug" 
+            width="209" 
+            height="150" 
+            allow="autoplay"
+            className="max-w-full"
+          />
+        </div>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-1">

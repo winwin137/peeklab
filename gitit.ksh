@@ -1,5 +1,5 @@
-VERSION=v5.1.4
-WHATEVS="more minor look and feel stuff"
+VERSION=v5.1.6
+WHATEVS="before sidbar menu"
 echo $VERSION
 echo $WHATEVS
 #exit 
