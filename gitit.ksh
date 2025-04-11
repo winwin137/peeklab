@@ -1,5 +1,5 @@
-VERSION=v5.1.6
-WHATEVS="before sidbar menu"
+VERSION=v5.1.7
+WHATEVS="video conversion plus the sidebar menu"
 echo $VERSION
 echo $WHATEVS
 #exit 
@@ -21,6 +21,6 @@ git push origin $VERSION  # Push the tag
 
 # Optional: Verify your new tag
 git tag -n
-git log -n
+git log -n 1
 
 

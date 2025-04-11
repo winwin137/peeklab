@@ -26,13 +26,18 @@ const AuthScreen: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <div className="w-full flex justify-center mb-4">
-          <iframe 
-            src="https://drive.google.com/file/d/0B_6Qo5C8i9eDNjVwWGJCSEJmVEk/preview?resourcekey=0-G5tKH4ogFxjH_KfXIVmOug" 
-            width="209" 
-            height="150" 
-            allow="autoplay"
+          <video 
+            width="640" 
+            height="480" 
+            controls 
             className="max-w-full"
-          />
+            autoPlay
+            muted
+            playsInline
+          >
+            <source src="/assets/video/peekdiet.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         </div>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
