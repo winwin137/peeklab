@@ -1,5 +1,5 @@
-VERSION=v5.1.9
-WHATEVS="this is sidebar menu"
+VERSION=v5.2.0
+WHATEVS="stable again"
 echo $VERSION
 echo $WHATEVS
 #exit 
