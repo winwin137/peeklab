@@ -26,18 +26,17 @@ const AuthScreen: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <div className="w-full flex justify-center mb-4">
-          <video 
-            width="640" 
-            height="480" 
-            controls 
+          <iframe 
+            width="560" 
+            height="315" 
+            src="https://www.youtube.com/embed/Q5liSXgmMF4?si=brYu1roSnW3Dx8r2" 
+            title="YouTube video player" 
+            frameBorder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen 
             className="max-w-full"
-            autoPlay
-            muted
-            playsInline
-          >
-            <source src="/assets/video/peekdiet.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+          />
         </div>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

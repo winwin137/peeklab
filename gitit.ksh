@@ -1,5 +1,5 @@
-VERSION=v5.1.7
-WHATEVS="video conversion plus the sidebar menu"
+VERSION=v5.1.8
+WHATEVS="yt video conversion plus the sidebar menu"
 echo $VERSION
 echo $WHATEVS
 #exit 
